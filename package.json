@@ -1,0 +1,41 @@
+{
+  "name": "deeplink-parity",
+  "version": "0.0.1",
+  "description": "Checks that what your mobile app declares about deep links matches what is actually hosted — across iOS and Android.",
+  "type": "module",
+  "bin": {
+    "deeplink-parity": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "keywords": [
+    "deeplink",
+    "universal-links",
+    "app-links",
+    "apple-app-site-association",
+    "assetlinks",
+    "ios",
+    "android"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "fast-xml-parser": "^5.10.1",
+    "plist": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/plist": "^3.0.5",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
