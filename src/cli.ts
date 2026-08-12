@@ -8,7 +8,12 @@ const USAGE = `deeplink-parity — check that what your app declares about deep 
 matches what is actually hosted, across iOS and Android.
 
 Usage
-  deeplink-parity [path] [options]
+  deeplink-parity [path...] [options]
+
+  Pass one path per checkout. iOS and Android usually live in separate
+  repositories, and comparing them is the point:
+
+    deeplink-parity ./my-app-ios ./my-app-android
 
 Options
   --sha256 <fingerprint>   Android signing fingerprint to look for in assetlinks.json
@@ -19,7 +24,7 @@ Options
 
 function parseArgs(argv: string[]) {
   const args = argv.slice(2)
-  let root = '.'
+  const roots: string[] = []
   let json = false
   let help = false
   let sha256: string | undefined
@@ -31,14 +36,20 @@ function parseArgs(argv: string[]) {
     else if (arg === '-h' || arg === '--help') help = true
     else if (arg === '--sha256') sha256 = args[++i]
     else if (arg === '--well-known') wellKnown = args[++i]
-    else if (!arg.startsWith('-')) root = arg
+    else if (!arg.startsWith('-')) roots.push(arg)
   }
 
-  return { root: resolve(root), json, help, sha256, wellKnown }
+  return {
+    roots: (roots.length ? roots : ['.']).map((r) => resolve(r)),
+    json,
+    help,
+    sha256,
+    wellKnown,
+  }
 }
 
 async function main() {
-  const { root, json, help, sha256, wellKnown } = parseArgs(process.argv)
+  const { roots, json, help, sha256, wellKnown } = parseArgs(process.argv)
 
   if (help) {
     console.log(USAGE)
@@ -46,10 +57,10 @@ async function main() {
   }
 
   const source = wellKnown ? localSource(resolve(wellKnown)) : networkSource()
-  const result = await run({ root, source, sha256 })
+  const result = await run({ roots, source, sha256 })
 
   if (result.iosApps.length === 0 && result.androidApps.length === 0) {
-    console.error(`No app configuration declaring deep links was found in ${root}`)
+    console.error(`No app configuration declaring deep links was found in ${roots.join(', ')}`)
     console.error(
       'Expected a .entitlements file with applinks:, or an AndroidManifest.xml with intent-filters.',
     )

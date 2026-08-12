@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises'
-import { relative } from 'node:path'
+
 import plist from 'plist'
 import type { IosApp } from '../types.js'
-import { walk } from './walk.js'
+import { displayPath, walk } from './walk.js'
 
 /**
  * Associated Domains entries look like `applinks:example.com`. A domain may carry
@@ -56,6 +56,24 @@ function signingByEntitlements(pbxproj: string): Map<string, TargetSigning> {
   return map
 }
 
+/**
+ * Pick the target whose recorded entitlements path is the longest tail of this file's
+ * path. Longest wins so that `Widget/Widget.entitlements` never matches the app when
+ * `App/App.entitlements` is also on file.
+ */
+function matchSigning(path: string, signing: Map<string, TargetSigning>): TargetSigning {
+  let best: TargetSigning = {}
+  let bestLength = -1
+  for (const [key, value] of signing) {
+    const tail = key.startsWith('/') ? key : `/${key}`
+    if (path.endsWith(tail) && key.length > bestLength) {
+      best = value
+      bestLength = key.length
+    }
+  }
+  return best
+}
+
 export async function discoverIos(root: string): Promise<IosApp[]> {
   const entitlementFiles = await walk(root, (n) => n.endsWith('.entitlements'))
   if (entitlementFiles.length === 0) return []
@@ -80,12 +98,13 @@ export async function discoverIos(root: string): Promise<IosApp[]> {
     const domains = parseAssociatedDomains(dict['com.apple.developer.associated-domains'])
     if (domains.length === 0) continue
 
-    // pbxproj records the entitlements path relative to SOURCE_ROOT
-    const rel = relative(root, path)
-    const target = signing.get(rel) ?? {}
+    // pbxproj records the entitlements path relative to SOURCE_ROOT, which is not
+    // necessarily the directory being scanned — match on the tail so that pointing at
+    // a repository root or at a subdirectory both resolve the same target.
+    const target = matchSigning(path, signing)
 
     apps.push({
-      entitlementsPath: rel,
+      entitlementsPath: displayPath(path),
       domains,
       bundleId: target.bundleId,
       teamId: target.teamId,

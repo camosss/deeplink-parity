@@ -11,7 +11,7 @@ const MATCHING_SHA256 =
 
 const crossRun = (sha256?: string) =>
   run({
-    root: join(FIXTURES, 'sample-cross'),
+    roots: [join(FIXTURES, 'sample-cross')],
     source: localSource(join(FIXTURES, 'sample-cross', 'well-known')),
     sha256,
   })
@@ -21,7 +21,7 @@ const rulesFor = (findings: { rule: string; domain?: string }[], domain: string)
 
 test('resolves Android hosts through strings, gradle resValue and properties', async () => {
   const { androidApps } = await run({
-    root: join(FIXTURES, 'sample-android'),
+    roots: [join(FIXTURES, 'sample-android')],
     source: localSource(join(FIXTURES, 'nonexistent')),
   })
 
@@ -39,7 +39,7 @@ test('resolves Android hosts through strings, gradle resValue and properties', a
 // Found by running against Bitwarden: `bitwarden://totp` has a host but is not an App Link
 test('ignores hosts on custom-scheme intent-filters', async () => {
   const { androidApps, findings } = await run({
-    root: join(FIXTURES, 'sample-android'),
+    roots: [join(FIXTURES, 'sample-android')],
     source: localSource(join(FIXTURES, 'nonexistent')),
   })
 
@@ -51,7 +51,7 @@ test('ignores hosts on custom-scheme intent-filters', async () => {
 // Found by running against Wikipedia: `applinks:*.wikipedia.org` is valid but unfetchable
 test('skips wildcard domains instead of trying to fetch them', async () => {
   const { findings } = await run({
-    root: join(FIXTURES, 'sample-android'),
+    roots: [join(FIXTURES, 'sample-android')],
     source: localSource(join(FIXTURES, 'nonexistent')),
   })
 
@@ -60,7 +60,7 @@ test('skips wildcard domains instead of trying to fetch them', async () => {
 
 test('reports references it cannot resolve instead of dropping them', async () => {
   const { androidApps, findings } = await run({
-    root: join(FIXTURES, 'sample-android'),
+    roots: [join(FIXTURES, 'sample-android')],
     source: localSource(join(FIXTURES, 'nonexistent')),
   })
 
@@ -73,7 +73,7 @@ test('reports references it cannot resolve instead of dropping them', async () =
 
 test('warns on an https intent-filter without autoVerify and does not fetch it', async () => {
   const { findings } = await run({
-    root: join(FIXTURES, 'sample-android'),
+    roots: [join(FIXTURES, 'sample-android')],
     source: localSource(join(FIXTURES, 'nonexistent')),
   })
 
@@ -82,11 +82,12 @@ test('warns on an https intent-filter without autoVerify and does not fetch it',
 
 test('pairs each entitlements file with its own target, not the first one found', async () => {
   const { iosApps } = await run({
-    root: join(FIXTURES, 'sample-ios'),
+    roots: [join(FIXTURES, 'sample-ios')],
     source: localSource(join(FIXTURES, 'nonexistent')),
   })
 
   assert.equal(iosApps.length, 1)
+  assert.ok(iosApps[0].entitlementsPath.endsWith('sample-ios/App/App.entitlements'))
   assert.equal(iosApps[0].bundleId, 'com.example.sample')
   assert.equal(iosApps[0].teamId, 'ABCDE12345')
   // applinks only — webcredentials and the ?mode= suffix must not leak through

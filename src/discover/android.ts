@@ -1,5 +1,4 @@
 import { readFile } from 'node:fs/promises'
-import { relative } from 'node:path'
 import { XMLParser } from 'fast-xml-parser'
 import {
   emptyIndex,
@@ -9,7 +8,7 @@ import {
   resolveRef,
 } from '../resolve/androidResources.js'
 import type { AndroidApp, AndroidHost } from '../types.js'
-import { walk } from './walk.js'
+import { displayPath, walk } from './walk.js'
 
 const VIEW_ACTION = 'android.intent.action.VIEW'
 const BROWSABLE = 'android.intent.category.BROWSABLE'
@@ -137,7 +136,7 @@ export async function discoverAndroid(root: string): Promise<AndroidApp[]> {
 
     if (hosts.size === 0 && unresolved.length === 0) continue
     apps.push({
-      manifestPath: relative(root, manifestPath),
+      manifestPath: displayPath(manifestPath),
       packageIds,
       hosts: [...hosts.values()],
       unresolved,

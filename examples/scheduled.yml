@@ -22,13 +22,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: ios
+
+      # The other platform usually lives in its own repository. Drop this step and the
+      # extra path below if both platforms are in this one.
+      - uses: actions/checkout@v4
+        with:
+          repository: your-org/your-app-android
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          path: android
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
 
       - name: Check deep link parity
         id: check
-        run: npx deeplink-parity . --sha256 "${{ secrets.ANDROID_SHA256 }}"
+        run: npx deeplink-parity ios android --sha256 "${{ secrets.ANDROID_SHA256 }}"
 
       - name: Open an issue when the check fails
         if: failure()

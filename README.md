@@ -9,7 +9,8 @@
 Checks that what your app **declares** about deep links matches what is actually **hosted** — on both iOS and Android, from one command.
 
 ```bash
-npx deeplink-parity .
+# iOS and Android usually live in separate repositories — pass both
+npx deeplink-parity ./my-app-ios ./my-app-android
 ```
 
 ```
@@ -76,12 +77,25 @@ No configuration file. Domains are discovered from your app, then the matching w
 ## Usage
 
 ```bash
-npx deeplink-parity [path] [options]
+npx deeplink-parity [path...] [options]
 
   --sha256 <fingerprint>   Android signing fingerprint to look for in assetlinks.json
   --well-known <dir>       Read well-known files from <dir>/<domain>/ instead of the network
   --json                   Machine-readable output
 ```
+
+Pass one path per checkout. A monorepo holding both platforms works as a single path,
+two repositories work as two paths, and a directory of symlinks to each checkout works
+too — the scan follows them.
+
+```bash
+npx deeplink-parity .                                  # one repo
+npx deeplink-parity ../app-ios ../app-android          # two repos
+npx deeplink-parity . --sha256 "AB:CD:…"               # include the fingerprint check
+```
+
+The Android signing fingerprint comes from Play Console → App integrity → App signing.
+Without it the fingerprint check is skipped and reported as such.
 
 Exits `1` when there is at least one error, so it drops into CI unchanged.
 

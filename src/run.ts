@@ -8,7 +8,8 @@ import { isWildcardDomain, wildcardFinding } from './rules/wildcard.js'
 import type { AndroidApp, Finding, IosApp } from './types.js'
 
 export interface RunOptions {
-  root: string
+  /** One or more checkout roots. Two repositories can be passed as two paths. */
+  roots: string[]
   source: WellKnownSource
   /** SHA256 signing fingerprint to look for in assetlinks.json */
   sha256?: string
@@ -25,8 +26,12 @@ function emptyView(): PlatformView {
   return { domains: new Set(), paths: new Map() }
 }
 
-export async function run({ root, source, sha256 }: RunOptions): Promise<RunResult> {
-  const [iosApps, androidApps] = await Promise.all([discoverIos(root), discoverAndroid(root)])
+export async function run({ roots, source, sha256 }: RunOptions): Promise<RunResult> {
+  const discovered = await Promise.all(
+    roots.map(async (root) => Promise.all([discoverIos(root), discoverAndroid(root)])),
+  )
+  const iosApps = discovered.flatMap(([ios]) => ios)
+  const androidApps = discovered.flatMap(([, android]) => android)
 
   const findings: Finding[] = []
   const ios = emptyView()
