@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Sample">
+        <activity android:name=".MainActivity" android:exported="true">
+
+            <!-- literal host -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="example.com" android:pathPrefix="/item" />
+            </intent-filter>
+
+            <!-- host behind a single @string reference -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/scheme_https" android:host="@string/host_link" />
+            </intent-filter>
+
+            <!-- host behind a chained reference resolved through gradle + properties -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="@string/host_attribution" />
+            </intent-filter>
+
+            <!-- https link with no autoVerify: should warn, not fetch -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="unverified.example.com" />
+            </intent-filter>
+
+            <!-- reference that cannot be resolved: should report, not silently drop -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="@string/host_missing" />
+            </intent-filter>
+
+            <!-- custom scheme: `sample://callback` carries a host but is not an App Link -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sample" android:host="callback" />
+            </intent-filter>
+
+            <!-- wildcard host: valid, but there is no single host to fetch -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="*.wildcard.example.com" />
+            </intent-filter>
+
+        </activity>
+    </application>
+</manifest>

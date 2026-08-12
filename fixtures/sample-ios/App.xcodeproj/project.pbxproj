@@ -1,0 +1,25 @@
+// !$*UTF8*$!
+// Fixture: two targets, each with its own bundle id. The widget's identifier must not
+// be attributed to the app — that pairing bug is what this fixture guards against.
+{
+	objects = {
+		AAAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
+				DEVELOPMENT_TEAM = ABCDE12345;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.sample;
+			};
+			name = Debug;
+		};
+		BBBB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/Widget.entitlements;
+				DEVELOPMENT_TEAM = ABCDE12345;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.sample.Widget;
+			};
+			name = Debug;
+		};
+	};
+}

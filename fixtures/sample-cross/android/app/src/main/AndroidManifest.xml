@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fixture: the domain sets deliberately disagree with the iOS side.
+     shared.example.com is on both; each platform also has one the other lacks. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:label="Sample">
+        <activity android:name=".MainActivity" android:exported="true">
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- /item is also declared on iOS; /promo is not, so the path sets differ -->
+                <data android:scheme="https" android:host="shared.example.com" android:pathPrefix="/item" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="android-only.example.com" />
+            </intent-filter>
+
+        </activity>
+    </application>
+</manifest>

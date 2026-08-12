@@ -1,0 +1,7 @@
+{
+  "applinks": {
+    "details": [
+      { "appIDs": ["ZZZZZ99999.com.other.app"], "components": [{ "/": "*" }] }
+    ]
+  }
+}

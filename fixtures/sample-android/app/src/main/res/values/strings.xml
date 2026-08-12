@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scheme_https">https</string>
+    <string name="host_link" translatable="false">links.example.com</string>
+    <!-- chains into a gradle-generated resource -->
+    <string name="host_attribution" translatable="false">@string/attribution_host</string>
+</resources>
