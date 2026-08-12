@@ -15,6 +15,8 @@ export interface RunOptions {
   source: WellKnownSource
   /** SHA256 signing fingerprint to look for in assetlinks.json */
   sha256?: string
+  /** Called once with the number of distinct domains about to be checked */
+  onDiscovered?: (count: number) => void
 }
 
 export interface RunResult {
@@ -28,7 +30,7 @@ function emptyView(): PlatformView {
   return { domains: new Set(), paths: new Map() }
 }
 
-export async function run({ roots, source, sha256 }: RunOptions): Promise<RunResult> {
+export async function run({ roots, source, sha256, onDiscovered }: RunOptions): Promise<RunResult> {
   const discovered = await Promise.all(
     roots.map(async (root) => Promise.all([discoverIos(root), discoverAndroid(root)])),
   )
@@ -44,6 +46,13 @@ export async function run({ roots, source, sha256 }: RunOptions): Promise<RunRes
 
   const ios = emptyView()
   const android = emptyView()
+
+  onDiscovered?.(
+    new Set([
+      ...iosApps.flatMap((a) => a.domains),
+      ...androidApps.flatMap((a) => a.hosts.map((h) => h.host)),
+    ]).size,
+  )
 
   for (const app of iosApps) {
     // the same domain can be declared by several targets; fetch it once

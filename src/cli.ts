@@ -57,7 +57,17 @@ async function main() {
   }
 
   const source = wellKnown ? localSource(resolve(wellKnown)) : networkSource()
-  const result = await run({ roots, source, sha256 })
+  const result = await run({
+    roots,
+    source,
+    sha256,
+    onDiscovered: (count) => {
+      // some apps declare a domain per country; say so before spending minutes on it
+      if (!wellKnown && count > 50) {
+        console.error(`Checking ${count} domains — requests are pooled, so this will take a while.`)
+      }
+    },
+  })
 
   if (result.iosApps.length === 0 && result.androidApps.length === 0 && result.findings.length === 0) {
     console.error(`No app configuration declaring deep links was found in ${roots.join(', ')}`)

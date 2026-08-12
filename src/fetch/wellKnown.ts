@@ -4,6 +4,13 @@ import type { FetchResult } from '../types.js'
 
 const TIMEOUT_MS = 10_000
 
+/**
+ * Identify the tool to the hosts being read. An operator seeing these requests in a log
+ * should be able to tell what they are and who to ask, rather than finding an anonymous
+ * Node default.
+ */
+const USER_AGENT = 'deeplink-parity (+https://github.com/camosss/deeplink-parity)'
+
 export const AASA_FILE = 'apple-app-site-association'
 export const ASSETLINKS_FILE = 'assetlinks.json'
 
@@ -31,7 +38,7 @@ async function fetchRaw(url: string): Promise<FetchResult> {
     const res = await fetch(url, {
       redirect: 'manual',
       signal: controller.signal,
-      headers: { accept: 'application/json' },
+      headers: { accept: 'application/json', 'user-agent': USER_AGENT },
     })
     const redirected = res.status >= 300 && res.status < 400
     return {
