@@ -9,8 +9,7 @@
 Checks that what your app **declares** about deep links matches what is actually **hosted** — on both iOS and Android, from one command.
 
 ```bash
-# iOS and Android usually live in separate repositories — pass both
-npx deeplink-parity ./my-app-ios ./my-app-android
+npx deeplink-parity .
 ```
 
 ```
@@ -27,6 +26,53 @@ WARN   promo.example.com
 
 1 error, 1 warn, 0 info
 ```
+
+<br>
+
+## Quick start
+
+Nothing to configure. Domains are read from your app and the matching files are fetched
+from them.
+
+**One repository** — a monorepo, Flutter, or React Native:
+
+```bash
+npx deeplink-parity .
+```
+
+**Two repositories** — native iOS and Android, which is the case worth checking:
+
+```bash
+npx deeplink-parity ./my-app-ios ./my-app-android
+```
+
+**On GitHub Actions**, one line:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: camosss/deeplink-parity@v1
+```
+
+Findings show up as annotations on the run. Add `sha256` to include the Android signing
+key in the check, and `fail-on: never` to report without failing while an existing backlog
+is cleared.
+
+<br>
+
+## Contents
+
+- [Why](#why)
+- [What it checks](#what-it-checks)
+- [Usage](#usage)
+  - [GitHub Action](#github-action)
+  - [In CI](#in-ci)
+  - [Run it on a schedule](#run-it-on-a-schedule)
+  - [Validate before deploying](#validate-before-deploying)
+- [Native, Flutter and React Native](#native-flutter-and-react-native)
+- [Hardened against real projects](#hardened-against-real-projects)
+- [What it does not do](#what-it-does-not-do)
+- [Development](#development)
+- [License](#license)
 
 <br>
 
@@ -81,7 +127,10 @@ npx deeplink-parity [path...] [options]
 
   --sha256 <fingerprint>   Android signing fingerprint to look for in assetlinks.json
   --well-known <dir>       Read well-known files from <dir>/<domain>/ instead of the network
-  --json                   Machine-readable output
+  --json                   Machine-readable output on stdout
+  --output <file>          Also write the JSON result to a file
+  --format github          GitHub Actions annotations (auto-detected on Actions)
+  -h, --help               Show this message
 ```
 
 Pass one path per checkout. A monorepo holding both platforms works as a single path,
@@ -139,7 +188,7 @@ writes nothing but JSON to stdout; progress notes go to stderr. On GitHub Action
 findings are also emitted as annotations, which appear on the run summary and against the
 file when one is involved — set `--format github` to force it elsewhere.
 
-### Run it on a schedule — this is the point
+### Run it on a schedule
 
 Your deep-link configuration changes a few times a year. The things that break it do not live in your repo at all:
 
@@ -152,11 +201,25 @@ A pull-request check never sees any of this. **A daily scheduled run does.** See
 
 ### Validate before deploying
 
-`--well-known <dir>` reads the files from disk instead of the network, so the web team can check staged files before they ship — and CI can run with no egress.
+`--well-known <dir>` reads the files from disk instead of the network, so the web team can
+check staged files before they ship — and CI can run with no egress at all.
+
+```
+well-known/
+└── links.example.com/
+    ├── apple-app-site-association
+    └── assetlinks.json
+```
 
 ```bash
-npx deeplink-parity . --well-known ./staging/well-known
+npx deeplink-parity . --well-known ./well-known
 ```
+
+This answers a different question, though: whether the app matches the files you intend to
+publish, not whether it matches what is live right now. The failures this tool exists to
+catch — a deploy putting a redirect in front of `/.well-known/`, an expired domain, a
+rotated key — only show up against the real host. Files hosted by an attribution vendor
+cannot be checked offline at all.
 
 <br>
 
