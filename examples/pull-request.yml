@@ -1,0 +1,30 @@
+# Deep-link check on pull requests that touch the declaration files.
+#
+# Secondary to the scheduled run: this catches app-side mistakes only. Filtering by
+# path keeps it off the ~99% of pull requests that cannot possibly affect deep links.
+#
+# Copy to .github/workflows/deeplink-parity-pr.yml
+
+name: deeplink-parity (pr)
+
+on:
+  pull_request:
+    paths:
+      - '**/*.entitlements'
+      - '**/AndroidManifest.xml'
+      - '**/res/values*/strings.xml'
+      - '**/build.gradle'
+      - '**/build.gradle.kts'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx deeplink-parity .
