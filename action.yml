@@ -28,7 +28,7 @@ inputs:
     required: false
     default: error
   version:
-    description: Version of the npm package to run. Defaults to the one this action ships with.
+    description: Version of the npm package to run. Defaults to the version this tag ships with.
     required: false
 
 outputs:
@@ -54,8 +54,6 @@ runs:
     - id: check
       shell: bash
       env:
-        # Pinned so a released tag keeps behaving the same; override with the version input
-        DEFAULT_VERSION: 0.5.0
         INPUT_PATHS: ${{ inputs.paths }}
         INPUT_SHA256: ${{ inputs.sha256 }}
         INPUT_WELL_KNOWN: ${{ inputs.well-known }}
@@ -63,7 +61,10 @@ runs:
         INPUT_VERSION: ${{ inputs.version }}
       run: |
         set -o pipefail
-        version="${INPUT_VERSION:-$DEFAULT_VERSION}"
+
+        # The tag being used pins the version: read it from the package.json checked out
+        # alongside this action, so a release never has to remember to bump it here.
+        version="${INPUT_VERSION:-$(node -p "require('${GITHUB_ACTION_PATH}/package.json').version")}"
         report="${RUNNER_TEMP}/deeplink-parity.json"
 
         # A checkout of this repository that has been built runs its own code, which lets
