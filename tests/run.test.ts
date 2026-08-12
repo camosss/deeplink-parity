@@ -132,3 +132,17 @@ test('a non-matching signing fingerprint is an error', async () => {
     rulesFor(findings, 'shared.example.com').includes('assetlinks-fingerprint-missing'),
   )
 })
+
+// Found by running against a real project: a dev domain's assetlinks names the
+// suffixed application id, which must still be recognised as ours
+test('counts applicationIdSuffix variants as the app', async () => {
+  const { androidApps } = await run({
+    roots: [join(FIXTURES, 'sample-cross')],
+    source: localSource(join(FIXTURES, 'sample-cross', 'well-known')),
+  })
+
+  assert.deepEqual(androidApps[0].packageIds.sort(), [
+    'com.example.sample',
+    'com.example.sample.dev',
+  ])
+})

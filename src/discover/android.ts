@@ -34,12 +34,27 @@ function collectIntentFilters(node: unknown, out: unknown[]) {
   }
 }
 
+/**
+ * A build type or flavor can append to the base id with `applicationIdSuffix`, and the
+ * dev variant is usually what a dev domain's assetlinks file names. Suffixes are applied
+ * to every base id so that both `com.example` and `com.example.dev` count as ours.
+ */
 function applicationIds(gradleSources: string[]): string[] {
-  const ids = new Set<string>()
+  const bases = new Set<string>()
+  const suffixes = new Set<string>()
+
   for (const src of gradleSources) {
-    for (const m of src.matchAll(/applicationId\s*(?:=|\s)\s*["']([^"']+)["']/g)) {
-      ids.add(m[1])
+    for (const m of src.matchAll(/\bapplicationId\s*(?:=|\s)\s*["']([^"']+)["']/g)) {
+      bases.add(m[1])
     }
+    for (const m of src.matchAll(/\bapplicationIdSuffix\s*(?:=|\s)\s*["']([^"']+)["']/g)) {
+      suffixes.add(m[1])
+    }
+  }
+
+  const ids = new Set(bases)
+  for (const base of bases) {
+    for (const suffix of suffixes) ids.add(`${base}${suffix}`)
   }
   return [...ids]
 }
