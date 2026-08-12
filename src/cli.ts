@@ -2,6 +2,7 @@
 import { resolve } from 'node:path'
 import { localSource, networkSource } from './fetch/wellKnown.js'
 import { exitCodeFor, printReport } from './report/console.js'
+import { printGithubAnnotations } from './report/github.js'
 import { run } from './run.js'
 
 const USAGE = `deeplink-parity — check that what your app declares about deep links
@@ -19,6 +20,7 @@ Options
   --sha256 <fingerprint>   Android signing fingerprint to look for in assetlinks.json
   --well-known <dir>       Read well-known files from <dir>/<domain>/ instead of the network
   --json                   Machine-readable output
+  --format github          GitHub Actions annotations (auto-detected on Actions)
   -h, --help               Show this message
 `
 
@@ -29,6 +31,8 @@ function parseArgs(argv: string[]) {
   let help = false
   let sha256: string | undefined
   let wellKnown: string | undefined
+  // Actions sets GITHUB_ACTIONS=true; annotate by default there
+  let format = process.env.GITHUB_ACTIONS === 'true' ? 'github' : 'console'
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
@@ -36,6 +40,7 @@ function parseArgs(argv: string[]) {
     else if (arg === '-h' || arg === '--help') help = true
     else if (arg === '--sha256') sha256 = args[++i]
     else if (arg === '--well-known') wellKnown = args[++i]
+    else if (arg === '--format') format = args[++i]
     else if (!arg.startsWith('-')) roots.push(arg)
   }
 
@@ -45,11 +50,12 @@ function parseArgs(argv: string[]) {
     help,
     sha256,
     wellKnown,
+    format,
   }
 }
 
 async function main() {
-  const { roots, json, help, sha256, wellKnown } = parseArgs(process.argv)
+  const { roots, json, help, sha256, wellKnown, format } = parseArgs(process.argv)
 
   if (help) {
     console.log(USAGE)
@@ -98,6 +104,9 @@ async function main() {
         2,
       ),
     )
+  } else if (format === 'github') {
+    printGithubAnnotations(result.findings)
+    printReport(result.findings, result.domains)
   } else {
     printReport(result.findings, result.domains)
   }

@@ -97,7 +97,18 @@ npx deeplink-parity . --sha256 "AB:CD:…"               # include the fingerpri
 The Android signing fingerprint comes from Play Console → App integrity → App signing.
 Without it the fingerprint check is skipped and reported as such.
 
-Exits `1` when there is at least one error, so it drops into CI unchanged.
+### In CI
+
+| Exit code | Meaning |
+|---|---|
+| `0` | No errors. Warnings and notices do not fail the run |
+| `1` | At least one error — a link is broken today |
+| `2` | Nothing to check, or the run itself failed |
+
+Colour is emitted only to a terminal, so piped and captured output stays plain. `--json`
+writes nothing but JSON to stdout; progress notes go to stderr. On GitHub Actions the
+findings are also emitted as annotations, which appear on the run summary and against the
+file when one is involved — set `--format github` to force it elsewhere.
 
 ### Run it on a schedule — this is the point
 

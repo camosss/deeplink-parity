@@ -16,7 +16,11 @@ const useColor = process.stdout.isTTY && !process.env.NO_COLOR
 const paint = (s: string, c: string) => (useColor ? `${c}${s}${RESET}` : s)
 
 export function printReport(findings: Finding[], checkedDomains: string[]) {
-  console.log(`\n${paint('deeplink-parity', BOLD)} ${DIM}·${RESET} ${checkedDomains.length} domain(s) checked\n`)
+  // every escape goes through paint(), which is a no-op when stdout is not a terminal
+  const separator = paint('·', DIM)
+  console.log(
+    `\n${paint('deeplink-parity', BOLD)} ${separator} ${checkedDomains.length} domain(s) checked\n`,
+  )
 
   if (findings.length === 0) {
     console.log(paint('No problems found', '[32m'))
