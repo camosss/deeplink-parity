@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { localSource, networkSource } from './fetch/wellKnown.js'
 import { exitCodeFor, printReport } from './report/console.js'
@@ -19,7 +20,8 @@ Usage
 Options
   --sha256 <fingerprint>   Android signing fingerprint to look for in assetlinks.json
   --well-known <dir>       Read well-known files from <dir>/<domain>/ instead of the network
-  --json                   Machine-readable output
+  --json                   Machine-readable output on stdout
+  --output <file>          Also write the JSON result to a file
   --format github          GitHub Actions annotations (auto-detected on Actions)
   -h, --help               Show this message
 `
@@ -31,6 +33,7 @@ function parseArgs(argv: string[]) {
   let help = false
   let sha256: string | undefined
   let wellKnown: string | undefined
+  let output: string | undefined
   // Actions sets GITHUB_ACTIONS=true; annotate by default there
   let format = process.env.GITHUB_ACTIONS === 'true' ? 'github' : 'console'
 
@@ -41,6 +44,7 @@ function parseArgs(argv: string[]) {
     else if (arg === '--sha256') sha256 = args[++i]
     else if (arg === '--well-known') wellKnown = args[++i]
     else if (arg === '--format') format = args[++i]
+    else if (arg === '--output') output = args[++i]
     else if (!arg.startsWith('-')) roots.push(arg)
   }
 
@@ -51,11 +55,12 @@ function parseArgs(argv: string[]) {
     sha256,
     wellKnown,
     format,
+    output,
   }
 }
 
 async function main() {
-  const { roots, json, help, sha256, wellKnown, format } = parseArgs(process.argv)
+  const { roots, json, help, sha256, wellKnown, format, output } = parseArgs(process.argv)
 
   if (help) {
     console.log(USAGE)
@@ -83,31 +88,35 @@ async function main() {
     process.exit(2)
   }
 
+  const payload = {
+    ios: result.iosApps.map((a) => ({
+      entitlements: a.entitlementsPath,
+      teamId: a.teamId,
+      bundleId: a.bundleId,
+      domains: a.domains,
+    })),
+    android: result.androidApps.map((a) => ({
+      manifest: a.manifestPath,
+      packageIds: a.packageIds,
+      hosts: a.hosts.map((h) => h.host),
+    })),
+    summary: {
+      domains: result.domains.length,
+      error: result.findings.filter((f) => f.severity === 'error').length,
+      warn: result.findings.filter((f) => f.severity === 'warn').length,
+      info: result.findings.filter((f) => f.severity === 'info').length,
+    },
+    findings: result.findings,
+  }
+
+  // A file keeps stdout free, so annotations and the readable report can coexist with
+  // machine-readable output in the same run.
+  if (output) await writeFile(output, `${JSON.stringify(payload, null, 2)}\n`)
+
   if (json) {
-    console.log(
-      JSON.stringify(
-        {
-          ios: result.iosApps.map((a) => ({
-            entitlements: a.entitlementsPath,
-            teamId: a.teamId,
-            bundleId: a.bundleId,
-            domains: a.domains,
-          })),
-          android: result.androidApps.map((a) => ({
-            manifest: a.manifestPath,
-            packageIds: a.packageIds,
-            hosts: a.hosts.map((h) => h.host),
-          })),
-          findings: result.findings,
-        },
-        null,
-        2,
-      ),
-    )
-  } else if (format === 'github') {
-    printGithubAnnotations(result.findings)
-    printReport(result.findings, result.domains)
+    console.log(JSON.stringify(payload, null, 2))
   } else {
+    if (format === 'github') printGithubAnnotations(result.findings)
     printReport(result.findings, result.domains)
   }
 

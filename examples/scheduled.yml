@@ -33,13 +33,12 @@ jobs:
           token: ${{ secrets.CROSS_REPO_TOKEN }}
           path: android
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
       - name: Check deep link parity
         id: check
-        run: npx deeplink-parity ios android --sha256 "${{ secrets.ANDROID_SHA256 }}"
+        uses: camosss/deeplink-parity@v1
+        with:
+          paths: ios android
+          sha256: ${{ secrets.ANDROID_SHA256 }}
 
       - name: Open an issue when the check fails
         if: failure()

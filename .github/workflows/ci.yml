@@ -23,3 +23,33 @@ jobs:
       - run: npm run typecheck
       # the suite runs against local fixtures, so no network is needed
       - run: npm test
+
+  action:
+    # the action is published from this repository, so a broken one has to fail here
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # the action prefers this build over the registry, so the change under test is
+      # what actually runs
+      - run: npm ci && npm run build
+
+      - name: Run the action against the fixtures
+        id: check
+        uses: ./
+        with:
+          paths: fixtures/sample-cross
+          well-known: fixtures/sample-cross/well-known
+          fail-on: never
+
+      - name: Assert the outputs
+        run: |
+          echo "errors=${{ steps.check.outputs.errors }}"
+          echo "warnings=${{ steps.check.outputs.warnings }}"
+          echo "domains=${{ steps.check.outputs.domains }}"
+          test "${{ steps.check.outputs.errors }}" = "2"
+          test "${{ steps.check.outputs.warnings }}" = "2"
+          test "${{ steps.check.outputs.domains }}" = "3"
+          test -f "${{ steps.check.outputs.report }}"

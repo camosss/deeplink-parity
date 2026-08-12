@@ -97,6 +97,35 @@ npx deeplink-parity . --sha256 "AB:CD:…"               # include the fingerpri
 The Android signing fingerprint comes from Play Console → App integrity → App signing.
 Without it the fingerprint check is skipped and reported as such.
 
+### GitHub Action
+
+```yaml
+- uses: camosss/deeplink-parity@v1
+  with:
+    paths: ios android          # one per checkout; omit for a single repo
+    sha256: ${{ secrets.ANDROID_SHA256 }}
+```
+
+Findings appear as annotations on the run, and counts are available to later steps:
+
+```yaml
+- uses: camosss/deeplink-parity@v1
+  id: links
+  with:
+    fail-on: never              # report without blocking while a backlog is cleared
+- run: echo "${{ steps.links.outputs.errors }} errors, ${{ steps.links.outputs.warnings }} warnings"
+```
+
+| Input | Default | |
+|---|---|---|
+| `paths` | `.` | Checkout paths, whitespace separated |
+| `sha256` | — | Android signing fingerprint |
+| `well-known` | — | Read from disk instead of the network |
+| `fail-on` | `error` | `never` to report without failing the step |
+| `version` | pinned | npm version to run |
+
+Outputs: `errors`, `warnings`, `notices`, `domains`, `report` (path to the JSON result).
+
 ### In CI
 
 | Exit code | Meaning |

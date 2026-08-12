@@ -1,0 +1,104 @@
+name: deeplink-parity
+description: Check that what your app declares about deep links matches what is actually hosted, on iOS and Android.
+author: camosss
+
+branding:
+  icon: link
+  color: blue
+
+inputs:
+  paths:
+    description: >-
+      Checkout paths to scan, whitespace separated. Pass one per platform when iOS and
+      Android live in separate repositories.
+    required: false
+    default: '.'
+  sha256:
+    description: Android signing fingerprint to look for in assetlinks.json.
+    required: false
+  well-known:
+    description: >-
+      Read well-known files from <dir>/<domain>/ instead of the network. Use this to
+      verify staged files, or to run with no egress.
+    required: false
+  fail-on:
+    description: >-
+      When the step should fail — "error" (default) or "never" to report without
+      blocking. Useful while an existing backlog is being cleared.
+    required: false
+    default: error
+  version:
+    description: Version of the npm package to run. Defaults to the one this action ships with.
+    required: false
+
+outputs:
+  errors:
+    description: Number of error findings.
+    value: ${{ steps.check.outputs.errors }}
+  warnings:
+    description: Number of warning findings.
+    value: ${{ steps.check.outputs.warnings }}
+  notices:
+    description: Number of informational findings.
+    value: ${{ steps.check.outputs.notices }}
+  domains:
+    description: Number of distinct domains checked.
+    value: ${{ steps.check.outputs.domains }}
+  report:
+    description: Path to the JSON report.
+    value: ${{ steps.check.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - id: check
+      shell: bash
+      env:
+        # Pinned so a released tag keeps behaving the same; override with the version input
+        DEFAULT_VERSION: 0.5.0
+        INPUT_PATHS: ${{ inputs.paths }}
+        INPUT_SHA256: ${{ inputs.sha256 }}
+        INPUT_WELL_KNOWN: ${{ inputs.well-known }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_VERSION: ${{ inputs.version }}
+      run: |
+        set -o pipefail
+        version="${INPUT_VERSION:-$DEFAULT_VERSION}"
+        report="${RUNNER_TEMP}/deeplink-parity.json"
+
+        # A checkout of this repository that has been built runs its own code, which lets
+        # CI exercise the action before anything is published. Consumers get the package.
+        if [ -f "${GITHUB_ACTION_PATH}/dist/cli.js" ]; then
+          cmd=(node "${GITHUB_ACTION_PATH}/dist/cli.js")
+        else
+          cmd=(npx --yes "deeplink-parity@${version}")
+        fi
+
+        args=()
+        # unquoted on purpose: paths are whitespace separated
+        for p in $INPUT_PATHS; do args+=("$p"); done
+        [ -n "$INPUT_SHA256" ] && args+=(--sha256 "$INPUT_SHA256")
+        [ -n "$INPUT_WELL_KNOWN" ] && args+=(--well-known "$INPUT_WELL_KNOWN")
+
+        set +e
+        "${cmd[@]}" "${args[@]}" --output "$report"
+        status=$?
+        set -e
+
+        if [ -f "$report" ]; then
+          for key in error warn info domains; do
+            value=$(node -e "console.log(require('$report').summary['$key'] ?? 0)")
+            case "$key" in
+              error) echo "errors=$value"   >> "$GITHUB_OUTPUT" ;;
+              warn)  echo "warnings=$value" >> "$GITHUB_OUTPUT" ;;
+              info)  echo "notices=$value"  >> "$GITHUB_OUTPUT" ;;
+              domains) echo "domains=$value" >> "$GITHUB_OUTPUT" ;;
+            esac
+          done
+          echo "report=$report" >> "$GITHUB_OUTPUT"
+        fi
+
+        # exit 2 means the run itself failed, which always fails the step
+        if [ "$status" = "2" ]; then exit 2; fi
+        if [ "$INPUT_FAIL_ON" = "never" ]; then exit 0; fi
+        exit "$status"
