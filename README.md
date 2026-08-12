@@ -1,5 +1,11 @@
 # deeplink-parity
 
+[![npm](https://img.shields.io/npm/v/deeplink-parity.svg)](https://www.npmjs.com/package/deeplink-parity)
+[![CI](https://github.com/camosss/deeplink-parity/actions/workflows/ci.yml/badge.svg)](https://github.com/camosss/deeplink-parity/actions/workflows/ci.yml)
+![Node](https://img.shields.io/badge/Node-18%2B-brightgreen.svg)
+![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20Android-lightgrey.svg)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Checks that what your app **declares** about deep links matches what is actually **hosted** — on both iOS and Android, from one command.
 
 ```bash
@@ -139,4 +145,4 @@ values, and unresolvable references.
 
 ## License
 
-MIT
+`deeplink-parity` is released under an MIT license. See [License](LICENSE) for more information.
