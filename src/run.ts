@@ -1,5 +1,7 @@
 import { discoverAndroid } from './discover/android.js'
+import { detectExpo } from './discover/expo.js'
 import { discoverIos } from './discover/ios.js'
+import { FETCH_CONCURRENCY, mapLimit } from './fetch/pool.js'
 import type { WellKnownSource } from './fetch/wellKnown.js'
 import { checkAndroidHost, checkAndroidUnresolved } from './rules/android.js'
 import { checkCrossPlatform, type PlatformView } from './rules/cross.js'
@@ -34,6 +36,12 @@ export async function run({ roots, source, sha256 }: RunOptions): Promise<RunRes
   const androidApps = discovered.flatMap(([, android]) => android)
 
   const findings: Finding[] = []
+
+  // an Expo checkout has no native project committed; say so rather than report nothing
+  if (iosApps.length === 0 && androidApps.length === 0) {
+    for (const root of roots) findings.push(...(await detectExpo(root, false)))
+  }
+
   const ios = emptyView()
   const android = emptyView()
 
@@ -46,7 +54,7 @@ export async function run({ roots, source, sha256 }: RunOptions): Promise<RunRes
     wildcards.forEach((d) => findings.push(wildcardFinding(d, app.entitlementsPath)))
 
     const pending = fresh.filter((d) => !isWildcardDomain(d))
-    const results = await Promise.all(pending.map((d) => source.aasa(d)))
+    const results = await mapLimit(pending, FETCH_CONCURRENCY, (d) => source.aasa(d))
     pending.forEach((domain, i) => {
       const { findings: domainFindings, aasa } = checkIosDomain(app, domain, results[i])
       findings.push(...domainFindings)
@@ -67,9 +75,9 @@ export async function run({ roots, source, sha256 }: RunOptions): Promise<RunRes
       .forEach((h) => findings.push(wildcardFinding(h.host, app.manifestPath)))
 
     const pending = fresh.filter((h) => !isWildcardDomain(h.host))
-    const results = await Promise.all(
-      // an unverified host is never checked by the system, so there is nothing to fetch
-      pending.map((h) => (h.autoVerify ? source.assetlinks(h.host) : Promise.resolve(null))),
+    // an unverified host is never checked by the system, so there is nothing to fetch
+    const results = await mapLimit(pending, FETCH_CONCURRENCY, (h) =>
+      h.autoVerify ? source.assetlinks(h.host) : Promise.resolve(null),
     )
     pending.forEach((entry, i) => {
       const res = results[i] ?? { url: '', ok: false, redirected: false }

@@ -146,3 +146,21 @@ test('counts applicationIdSuffix variants as the app', async () => {
     'com.example.sample.dev',
   ])
 })
+
+// Found by running against Bluesky: an Expo checkout gitignores ios/ and android/,
+// so scanning it found nothing at all and read as "all clear"
+test('flags an Expo project whose native folders are not committed', async () => {
+  const { findings, iosApps, androidApps } = await run({
+    roots: [join(FIXTURES, 'sample-expo')],
+    source: localSource(join(FIXTURES, 'nonexistent')),
+  })
+
+  assert.equal(iosApps.length, 0)
+  assert.equal(androidApps.length, 0)
+
+  const expo = findings.find((f) => f.rule === 'expo-config-only')
+  assert.ok(expo, 'expected the Expo config to be reported')
+  // a static config is readable without executing it
+  assert.ok(expo.detail?.includes('example.com'))
+  assert.ok(expo.detail?.includes('links.example.com'))
+})

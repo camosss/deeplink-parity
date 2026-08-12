@@ -59,7 +59,7 @@ async function main() {
   const source = wellKnown ? localSource(resolve(wellKnown)) : networkSource()
   const result = await run({ roots, source, sha256 })
 
-  if (result.iosApps.length === 0 && result.androidApps.length === 0) {
+  if (result.iosApps.length === 0 && result.androidApps.length === 0 && result.findings.length === 0) {
     console.error(`No app configuration declaring deep links was found in ${roots.join(', ')}`)
     console.error(
       'Expected a .entitlements file with applinks:, or an AndroidManifest.xml with intent-filters.',

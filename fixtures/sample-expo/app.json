@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Sample",
+    "ios": {
+      "bundleIdentifier": "com.example.sample",
+      "associatedDomains": ["applinks:example.com", "applinks:links.example.com"]
+    },
+    "android": {
+      "package": "com.example.sample",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "example.com" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    }
+  }
+}

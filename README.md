@@ -120,17 +120,40 @@ npx deeplink-parity . --well-known ./staging/well-known
 
 <br>
 
+## Native, Flutter and React Native
+
+Whatever the app is written in, deep links are declared in the same two native files and
+verified against the same two hosted files. The scan looks for those, so a Flutter or
+React Native checkout works with no extra setup:
+
+```bash
+npx deeplink-parity .          # ios/ and android/ live in one repo
+```
+
+**Expo is the exception.** `expo prebuild` generates `ios/` and `android/` at build time
+and they are normally gitignored, so there is nothing to scan. Run the check after a
+prebuild, or on CI after the prebuild step. Pointed at an un-prebuilt Expo project the
+scan says so rather than reporting a clean run — a static `app.json` also lists the
+domains it found, though a JavaScript config is never evaluated.
+
+<br>
+
 ## Hardened against real projects
 
 Synthetic fixtures agree with whatever the author assumed. Real apps do not — so this was
-run against several open-source iOS and Android apps (Wikipedia, Mastodon, Bitwarden,
-DuckDuckGo), which turned up three bugs that fixtures never would have:
+run against open-source apps across all four stacks (Wikipedia, Mastodon, Bitwarden,
+DuckDuckGo, Bluesky, Open Food Facts). Every one of these came from that exercise, and
+none would have surfaced against fixtures alone:
 
 - `applinks:*.example.com` is a valid wildcard declaration, and there is no such host to fetch
 - `myapp://callback` carries a host too, but a custom scheme is not an App Link
 - an entitlements file belongs to one target, so the app must not inherit the widget's bundle id
+- a dev domain's assetlinks names the `applicationIdSuffix` variant, which is still our app
+- an app can declare a domain per country, and firing every request at once caused the very
+  timeouts it then reported — requests are now pooled
+- an Expo checkout has no native project to scan, which read as a clean run
 
-Each is now a regression test. A browser's `http`/`https` filters with no host are correctly
+Each is a regression test. A browser's `http`/`https` filters with no host are correctly
 read as browser registration rather than deep links.
 
 <br>
