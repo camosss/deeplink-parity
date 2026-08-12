@@ -1,6 +1,6 @@
 {
   "name": "deeplink-parity",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Checks that what your mobile app declares about deep links matches what is actually hosted — across iOS and Android.",
   "type": "module",
   "bin": {
@@ -13,7 +13,8 @@
     "dev": "tsx src/cli.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "keywords": [
     "deeplink",
@@ -24,7 +25,16 @@
     "ios",
     "android"
   ],
+  "author": "Hosung Kang (https://github.com/camosss)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/camosss/deeplink-parity.git"
+  },
+  "homepage": "https://github.com/camosss/deeplink-parity#readme",
+  "bugs": {
+    "url": "https://github.com/camosss/deeplink-parity/issues"
+  },
   "dependencies": {
     "fast-xml-parser": "^5.10.1",
     "plist": "^3.1.0"
