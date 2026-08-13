@@ -59,8 +59,8 @@ npx deeplink-parity ./my-app-ios ./my-app-android
 ```
 
 Findings show up as annotations on the run. Add `sha256` to include the Android signing
-key in the check, and `fail-on: never` to report without failing while an existing backlog
-is cleared.
+key in the check. Already have findings? Freeze them once with `npx deeplink-parity
+baseline` and commit the file — the check then fails only on new ones.
 
 Domains are checked with zero setup. To also compare the **screens behind the links**,
 run `npx deeplink-parity init` once — see [Route parity](#route-parity).
@@ -74,6 +74,7 @@ run `npx deeplink-parity init` once — see [Route parity](#route-parity).
 - [Usage](#usage)
   - [GitHub Action](#github-action)
   - [In CI](#in-ci)
+  - [Start with existing findings](#start-with-existing-findings)
   - [Run it on a schedule](#run-it-on-a-schedule)
   - [Validate before deploying](#validate-before-deploying)
 - [Route parity](#route-parity)
@@ -135,10 +136,12 @@ No configuration file. Domains are discovered from your app, then the matching w
 ```bash
 npx deeplink-parity [path...] [options]        # check (default)
 npx deeplink-parity init [path...]             # interactive setup for route comparison
+npx deeplink-parity baseline [path...]         # freeze current findings; fail on new ones only
 
   --sha256 <fingerprint>   Android signing fingerprint to look for in assetlinks.json
   --well-known <dir>       Read well-known files from <dir>/<domain>/ instead of the network
   --config <file>          Route config (default: deeplink-parity.yml in cwd or a root)
+  --baseline <file>        Baseline file (default: deeplink-parity-baseline.json in cwd or a root)
   --print-routes           Print the extracted route tables before the report
   --json                   Machine-readable output on stdout
   --output <file>          Also write the JSON result to a file
@@ -186,6 +189,7 @@ Findings appear as annotations on the run, and counts are available to later ste
 | `sha256` | — | Android signing fingerprint |
 | `well-known` | — | Read from disk instead of the network |
 | `config` | auto | Route config file (see [Route parity](#route-parity)) |
+| `baseline` | auto | Baseline file (see [Start with existing findings](#start-with-existing-findings)) |
 | `fail-on` | `error` | `never` to report without failing the step |
 | `version` | pinned | npm version to run |
 
@@ -203,6 +207,24 @@ Colour is emitted only to a terminal, so piped and captured output stays plain. 
 writes nothing but JSON to stdout; progress notes go to stderr. On GitHub Actions the
 findings are also emitted as annotations, which appear on the run summary and against the
 file when one is involved — set `--format github` to force it elsewhere.
+
+### Start with existing findings
+
+A tool that fails on day one gets turned off on day two. If the first run reports
+problems you cannot fix immediately, freeze them:
+
+```bash
+npx deeplink-parity baseline ./app-ios ./app-android
+```
+
+That writes `deeplink-parity-baseline.json` — commit it. From then on every check still
+**reports** the known findings, marked `(baselined)`, but only a finding that is not in
+the file fails the run. The file stores a one-line summary per finding, so a reviewer
+can read what is being tolerated. When a baselined problem gets fixed, the check says
+so; re-run `baseline` to tighten the file.
+
+A known problem keeps its identity when the failure changes shape — a domain that
+answered 404 yesterday and times out today is still one known problem, not a new alert.
 
 ### Run it on a schedule
 

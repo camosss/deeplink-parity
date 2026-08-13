@@ -26,6 +26,12 @@ inputs:
       Route config file passed to --config. By default deeplink-parity.yml is looked up
       in the working directory and each scanned path.
     required: false
+  baseline:
+    description: >-
+      Baseline file passed to --baseline. By default deeplink-parity-baseline.json is
+      looked up in the working directory and each scanned path; when found, the check
+      fails only on findings that are not in it.
+    required: false
   fail-on:
     description: >-
       When the step should fail — "error" (default) or "never" to report without
@@ -63,6 +69,7 @@ runs:
         INPUT_SHA256: ${{ inputs.sha256 }}
         INPUT_WELL_KNOWN: ${{ inputs.well-known }}
         INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_BASELINE: ${{ inputs.baseline }}
         INPUT_FAIL_ON: ${{ inputs.fail-on }}
         INPUT_VERSION: ${{ inputs.version }}
       run: |
@@ -87,6 +94,7 @@ runs:
         [ -n "$INPUT_SHA256" ] && args+=(--sha256 "$INPUT_SHA256")
         [ -n "$INPUT_WELL_KNOWN" ] && args+=(--well-known "$INPUT_WELL_KNOWN")
         [ -n "$INPUT_CONFIG" ] && args+=(--config "$INPUT_CONFIG")
+        [ -n "$INPUT_BASELINE" ] && args+=(--baseline "$INPUT_BASELINE")
 
         set +e
         "${cmd[@]}" "${args[@]}" --output "$report"
