@@ -101,8 +101,20 @@ test('candidate scan surfaces the route tables as the top pick per platform', as
   assert.ok(topAndroid?.file.endsWith('DeepLinks.kt'))
 })
 
+test('regex suggestion merges several files into one table', async () => {
+  const suggestions = await suggestRegex([
+    join(CROSS, 'ios/App/DeepLinkRoutes.swift'),
+    join(CROSS, 'android/app/src/main/java/DeepLinks.kt'),
+  ])
+
+  // the generic shape sees paths from both files
+  const generic = suggestions.find((s) => s.name === 'any path string')
+  assert.ok(generic?.paths.includes('/item/best'))
+  assert.ok(generic?.paths.includes('/events'))
+})
+
 test('regex suggestion recognises the swift enum shape and extracts its paths', async () => {
-  const suggestions = await suggestRegex(join(CROSS, 'ios/App/DeepLinkRoutes.swift'))
+  const suggestions = await suggestRegex([join(CROSS, 'ios/App/DeepLinkRoutes.swift')])
 
   assert.ok(suggestions.length > 0)
   assert.deepEqual(suggestions[0].paths, ['/item', '/item/best', '/notice', '/search'])

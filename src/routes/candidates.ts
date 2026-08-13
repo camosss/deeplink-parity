@@ -71,8 +71,8 @@ const SHAPES: { name: string; pattern: string }[] = [
   { name: 'any path string', pattern: String.raw`"(\/[a-z0-9][a-z0-9\/_-]*)"` },
 ]
 
-export async function suggestRegex(file: string): Promise<RegexSuggestion[]> {
-  const content = await readFile(file, 'utf8')
+export async function suggestRegex(files: string[]): Promise<RegexSuggestion[]> {
+  const content = (await Promise.all(files.map((f) => readFile(f, 'utf8')))).join('\n')
   const suggestions: RegexSuggestion[] = []
   for (const shape of SHAPES) {
     const paths = [

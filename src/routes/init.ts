@@ -5,7 +5,8 @@ import { dump } from 'js-yaml'
 import { findCandidates, suggestRegex, type Candidate } from './candidates.js'
 
 interface PlatformPick {
-  file: string
+  file?: string
+  files?: string[]
   match: string
 }
 
@@ -20,41 +21,50 @@ function rootRelative(file: string, roots: string[]): string {
   return file
 }
 
-async function pickFile(
+async function pickFiles(
   rl: Interface,
   platform: 'ios' | 'android',
   candidates: Candidate[],
   yes: boolean,
-): Promise<string | undefined> {
+): Promise<string[]> {
   const top = candidates.filter((c) => c.platform === platform).slice(0, 5)
 
   if (top.length === 0) {
-    if (yes) return undefined
+    if (yes) return []
     const manual = (
       await rl.question(`No ${platform} route-file candidates found. Enter a path, or leave blank to skip: `)
     ).trim()
-    return manual || undefined
+    return manual ? [manual] : []
   }
 
-  if (yes) return top[0].file
+  if (yes) return [top[0].file]
 
   console.log(`\n${platform === 'ios' ? 'iOS' : 'Android'} route file candidates:`)
   top.forEach((c, i) => console.log(`  ${i + 1}. ${c.file}  (${c.pathStrings} path strings)`))
   console.log(`  m. enter a path manually`)
   console.log(`  s. skip ${platform}`)
+  console.log(`  (several numbers select several files, e.g. "1 2")`)
 
-  const answer = (await rl.question('> ')).trim().toLowerCase()
-  if (answer === 's' || answer === '') return undefined
-  if (answer === 'm') {
-    const manual = (await rl.question('path: ')).trim()
-    return manual || undefined
+  // an answer that cannot be interpreted is asked again — never silently narrowed
+  for (;;) {
+    const answer = (await rl.question('> ')).trim().toLowerCase()
+    if (answer === 's' || answer === '') return []
+    if (answer === 'm') {
+      const manual = (await rl.question('path: ')).trim()
+      return manual ? [manual] : []
+    }
+    const tokens = answer.split(/[,\s]+/)
+    const indexes = tokens.map((t) => Number.parseInt(t, 10))
+    const valid =
+      indexes.length > 0 &&
+      indexes.every((n, i) => Number.isInteger(n) && String(n) === tokens[i] && n >= 1 && n <= top.length)
+    if (valid) return [...new Set(indexes)].map((n) => top[n - 1].file)
+    console.log(`  Could not read "${answer}" — numbers 1-${top.length}, "m" or "s".`)
   }
-  const index = Number.parseInt(answer, 10)
-  return Number.isInteger(index) && index >= 1 && index <= top.length ? top[index - 1].file : undefined
 }
 
-async function pickRegex(rl: Interface, file: string, yes: boolean): Promise<string | undefined> {
-  const suggestions = await suggestRegex(file)
+async function pickRegex(rl: Interface, files: string[], yes: boolean): Promise<string | undefined> {
+  const suggestions = await suggestRegex(files)
 
   if (suggestions.length > 0) {
     const best = suggestions[0]
@@ -92,11 +102,13 @@ export async function runInit(roots: string[], yes: boolean): Promise<number> {
     const picks: { ios?: PlatformPick; android?: PlatformPick } = {}
 
     for (const platform of ['ios', 'android'] as const) {
-      const file = await pickFile(rl, platform, candidates, yes)
-      if (!file) continue
-      const match = await pickRegex(rl, file, yes)
+      const files = await pickFiles(rl, platform, candidates, yes)
+      if (files.length === 0) continue
+      const match = await pickRegex(rl, files, yes)
       if (!match) continue
-      picks[platform] = { file: rootRelative(file, roots), match }
+      const relative = files.map((f) => rootRelative(f, roots))
+      picks[platform] =
+        relative.length === 1 ? { file: relative[0], match } : { files: relative, match }
     }
 
     if (!picks.ios && !picks.android) {

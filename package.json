@@ -1,6 +1,6 @@
 {
   "name": "deeplink-parity",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Checks that what your mobile app declares about deep links matches what is actually hosted — across iOS and Android.",
   "type": "module",
   "bin": {
