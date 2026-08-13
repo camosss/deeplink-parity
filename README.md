@@ -13,7 +13,8 @@ npx deeplink-parity .
 ```
 
 ```
-deeplink-parity · 3 domain(s) checked
+deeplink-parity v0.6.4 · 3 domain(s) checked
+routes: deeplink-parity.yml (iOS 74 · Android 73)
 
 ERROR  links.example.com
        AASA responded with 404
@@ -24,7 +25,11 @@ WARN   promo.example.com
        Declared on iOS but not on Android
        The same link opens the app on iOS and the browser on Android
 
-1 error, 1 warn, 0 info
+WARN   route-gap
+       /events is in the Android route table but not iOS's
+       A /events link navigates on Android and goes nowhere on iOS.
+
+1 error, 2 warn, 0 info
 ```
 
 <br>
@@ -56,6 +61,9 @@ npx deeplink-parity ./my-app-ios ./my-app-android
 Findings show up as annotations on the run. Add `sha256` to include the Android signing
 key in the check, and `fail-on: never` to report without failing while an existing backlog
 is cleared.
+
+Domains are checked with zero setup. To also compare the **screens behind the links**,
+run `npx deeplink-parity init` once — see [Route parity](#route-parity).
 
 <br>
 
@@ -111,6 +119,7 @@ No configuration file. Domains are discovered from your app, then the matching w
 **Warnings** — one platform works and the other does not
 
 - **A domain is declared on iOS but not Android, or the reverse**
+- **A route is in one platform's route table but not the other's** (with [route parity](#route-parity) set up)
 - An `https` intent-filter has no `autoVerify`
 - A manifest host reference could not be resolved
 
@@ -135,6 +144,7 @@ npx deeplink-parity init [path...]             # interactive setup for route com
   --output <file>          Also write the JSON result to a file
   --format github          GitHub Actions annotations (auto-detected on Actions)
   --yes                    init only: accept the top suggestion without prompting
+  -v, --version            Print the version
   -h, --help               Show this message
 ```
 
@@ -274,6 +284,8 @@ The **check never writes to the repositories it scans** — it reads files and G
 public well-known files per domain, nothing else. `init` writes exactly one file,
 `deeplink-parity.yml`, in your working directory, after printing its content and asking.
 
+<br>
+
 ## Native, Flutter and React Native
 
 Whatever the app is written in, deep links are declared in the same two native files and
@@ -316,7 +328,9 @@ read as browser registration rather than deep links.
 
 - **Deferred deep links are out of scope.** Install-then-open attribution is decided at runtime by your attribution SDK's servers. No static check can confirm it, and reporting a pass would be worse than saying nothing.
 - **It does not prove path equivalence.** iOS and Android use different path-matching engines. Differing path sets are reported as `info` with both sides shown, for a human to judge — not asserted as a bug.
-- **It does not run your app.** Route handling inside the app is not inspected.
+- **It does not run your app.** Route parity compares the declared tables; whether a
+  handler behind a route actually works, or a dynamically-matched route resolves, only
+  shows up on a device.
 
 <br>
 
@@ -330,7 +344,7 @@ npm run typecheck
 
 `fixtures/` holds synthetic iOS and Android projects covering literal hosts, chained
 `@string` references resolved through gradle `resValue` and `.properties`, flavor-specific
-values, and unresolvable references.
+values, unresolvable references, and route tables in both platforms' shapes.
 
 <br>
 
