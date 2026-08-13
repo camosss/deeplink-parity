@@ -68,6 +68,7 @@ is cleared.
   - [In CI](#in-ci)
   - [Run it on a schedule](#run-it-on-a-schedule)
   - [Validate before deploying](#validate-before-deploying)
+- [Route parity](#route-parity)
 - [Native, Flutter and React Native](#native-flutter-and-react-native)
 - [Hardened against real projects](#hardened-against-real-projects)
 - [What it does not do](#what-it-does-not-do)
@@ -123,13 +124,17 @@ No configuration file. Domains are discovered from your app, then the matching w
 ## Usage
 
 ```bash
-npx deeplink-parity [path...] [options]
+npx deeplink-parity [path...] [options]        # check (default)
+npx deeplink-parity init [path...]             # interactive setup for route comparison
 
   --sha256 <fingerprint>   Android signing fingerprint to look for in assetlinks.json
   --well-known <dir>       Read well-known files from <dir>/<domain>/ instead of the network
+  --config <file>          Route config (default: deeplink-parity.yml in cwd or a root)
+  --print-routes           Print the extracted route tables before the report
   --json                   Machine-readable output on stdout
   --output <file>          Also write the JSON result to a file
   --format github          GitHub Actions annotations (auto-detected on Actions)
+  --yes                    init only: accept the top suggestion without prompting
   -h, --help               Show this message
 ```
 
@@ -170,6 +175,7 @@ Findings appear as annotations on the run, and counts are available to later ste
 | `paths` | `.` | Checkout paths, whitespace separated |
 | `sha256` | — | Android signing fingerprint |
 | `well-known` | — | Read from disk instead of the network |
+| `config` | auto | Route config file (see [Route parity](#route-parity)) |
 | `fail-on` | `error` | `never` to report without failing the step |
 | `version` | pinned | npm version to run |
 
@@ -222,6 +228,51 @@ rotated key — only show up against the real host. Files hosted by an attributi
 cannot be checked offline at all.
 
 <br>
+
+## Route parity
+
+Domains are only half the story. The other half is the screen behind the link: a route
+registered on Android but never on iOS means `myapp://link/events` navigates on one
+platform and goes nowhere on the other — and the person sending that link has no way
+to know.
+
+Route tables live in app code with no standard location, so this check is **opt-in via
+one config file**. Run the interactive setup once:
+
+```bash
+npx deeplink-parity init ./my-app-ios ./my-app-android
+```
+
+It scans for likely route-table files, lets you pick one per platform (or type a path
+yourself), recognises the table's shape, previews what it extracts, and writes
+`deeplink-parity.yml`:
+
+```yaml
+routes:
+  ios:
+    file: App/Routing/DeepLinkRoutes.swift     # relative to whichever root it lives under
+    match: 'case \w+ = "(/[a-z0-9/_-]+)"'      # capture group 1 = the path
+  android:
+    file: app/src/main/java/…/DeepLinks.kt
+    match: '[A-Z_]+\("(/[a-z0-9/_-]+)"\)'
+```
+
+Commit it. From then on every check — CLI and Action alike — also diffs the two route
+tables and reports the paths one platform has and the other does not. Verify the
+extraction any time with `--print-routes`.
+
+Accuracy guards, in keeping with the rest of the tool:
+
+- A regex that matches nothing is an **error**, never a clean pass
+- If only one platform extracts, no gaps are reported — a broken table is not a diff
+- Routes handled dynamically (prefix or component matching) never appear in a table;
+  gap findings carry that caveat
+
+### What the tool touches
+
+The **check never writes to the repositories it scans** — it reads files and GETs two
+public well-known files per domain, nothing else. `init` writes exactly one file,
+`deeplink-parity.yml`, in your working directory, after printing its content and asking.
 
 ## Native, Flutter and React Native
 

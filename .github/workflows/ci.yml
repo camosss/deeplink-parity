@@ -50,6 +50,7 @@ jobs:
           echo "warnings=${{ steps.check.outputs.warnings }}"
           echo "domains=${{ steps.check.outputs.domains }}"
           test "${{ steps.check.outputs.errors }}" = "2"
-          test "${{ steps.check.outputs.warnings }}" = "2"
+          # 2 domain gaps + 2 route gaps from the fixture config
+          test "${{ steps.check.outputs.warnings }}" = "4"
           test "${{ steps.check.outputs.domains }}" = "3"
           test -f "${{ steps.check.outputs.report }}"

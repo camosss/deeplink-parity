@@ -21,6 +21,11 @@ inputs:
       Read well-known files from <dir>/<domain>/ instead of the network. Use this to
       verify staged files, or to run with no egress.
     required: false
+  config:
+    description: >-
+      Route config file passed to --config. By default deeplink-parity.yml is looked up
+      in the working directory and each scanned path.
+    required: false
   fail-on:
     description: >-
       When the step should fail — "error" (default) or "never" to report without
@@ -57,6 +62,7 @@ runs:
         INPUT_PATHS: ${{ inputs.paths }}
         INPUT_SHA256: ${{ inputs.sha256 }}
         INPUT_WELL_KNOWN: ${{ inputs.well-known }}
+        INPUT_CONFIG: ${{ inputs.config }}
         INPUT_FAIL_ON: ${{ inputs.fail-on }}
         INPUT_VERSION: ${{ inputs.version }}
       run: |
@@ -80,6 +86,7 @@ runs:
         for p in $INPUT_PATHS; do args+=("$p"); done
         [ -n "$INPUT_SHA256" ] && args+=(--sha256 "$INPUT_SHA256")
         [ -n "$INPUT_WELL_KNOWN" ] && args+=(--well-known "$INPUT_WELL_KNOWN")
+        [ -n "$INPUT_CONFIG" ] && args+=(--config "$INPUT_CONFIG")
 
         set +e
         "${cmd[@]}" "${args[@]}" --output "$report"
