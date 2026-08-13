@@ -7,6 +7,9 @@ import { checkAndroidHost, checkAndroidUnresolved } from './rules/android.js'
 import { checkCrossPlatform, type PlatformView } from './rules/cross.js'
 import { aasaPaths, checkIosDomain } from './rules/ios.js'
 import { isWildcardDomain, wildcardFinding } from './rules/wildcard.js'
+import { compareRoutes } from './routes/check.js'
+import type { RoutesConfig } from './routes/config.js'
+import { extractRoutes, type ExtractedRoutes } from './routes/extract.js'
 import type { AndroidApp, Finding, IosApp } from './types.js'
 
 export interface RunOptions {
@@ -15,6 +18,8 @@ export interface RunOptions {
   source: WellKnownSource
   /** SHA256 signing fingerprint to look for in assetlinks.json */
   sha256?: string
+  /** Route-table comparison, active only when a config declares it */
+  routes?: RoutesConfig
   /** Called once with the number of distinct domains about to be checked */
   onDiscovered?: (count: number) => void
 }
@@ -23,6 +28,7 @@ export interface RunResult {
   iosApps: IosApp[]
   androidApps: AndroidApp[]
   domains: string[]
+  routes?: { ios?: ExtractedRoutes; android?: ExtractedRoutes }
   findings: Finding[]
 }
 
@@ -30,7 +36,27 @@ function emptyView(): PlatformView {
   return { domains: new Set(), paths: new Map() }
 }
 
-export async function run({ roots, source, sha256, onDiscovered }: RunOptions): Promise<RunResult> {
+async function runRouteChecks(
+  routes: RoutesConfig,
+  roots: string[],
+  findings: Finding[],
+): Promise<RunResult['routes']> {
+  const [ios, android] = await Promise.all([
+    routes.ios ? extractRoutes('ios', routes.ios, roots) : undefined,
+    routes.android ? extractRoutes('android', routes.android, roots) : undefined,
+  ])
+  findings.push(...(ios?.findings ?? []), ...(android?.findings ?? []))
+  findings.push(...compareRoutes(ios?.routes, android?.routes))
+  return { ios: ios?.routes, android: android?.routes }
+}
+
+export async function run({
+  roots,
+  source,
+  sha256,
+  routes,
+  onDiscovered,
+}: RunOptions): Promise<RunResult> {
   const discovered = await Promise.all(
     roots.map(async (root) => Promise.all([discoverIos(root), discoverAndroid(root)])),
   )
@@ -96,10 +122,13 @@ export async function run({ roots, source, sha256, onDiscovered }: RunOptions): 
 
   findings.push(...checkCrossPlatform(ios, android))
 
+  const routeTables = routes ? await runRouteChecks(routes, roots, findings) : undefined
+
   return {
     iosApps,
     androidApps,
     domains: [...new Set([...ios.domains, ...android.domains])],
+    routes: routeTables,
     findings,
   }
 }

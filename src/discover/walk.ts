@@ -21,6 +21,7 @@ const SKIP_DIRS = new Set([
   '.build',
   '.gradle',
   '.idea',
+  '.claude',
 ])
 
 /**

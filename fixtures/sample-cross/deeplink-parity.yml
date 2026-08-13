@@ -1,0 +1,7 @@
+routes:
+  ios:
+    file: ios/App/DeepLinkRoutes.swift
+    match: 'case \w+ = "(/[a-z0-9/_-]+)"'
+  android:
+    file: android/app/src/main/java/DeepLinks.kt
+    match: '[A-Z_]+\("(/[a-z0-9/_-]+)"\)'
