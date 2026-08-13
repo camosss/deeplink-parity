@@ -102,6 +102,13 @@ async function pickRegex(rl: Interface, files: string[], yes: boolean): Promise<
  * after printing its full content and asking. The scanned repositories are never touched.
  */
 export async function runInit(roots: string[], yes: boolean): Promise<number> {
+  // Without a terminal the prompts get EOF and the process would exit 0 having done
+  // nothing — a silent success, which is worse than a hang.
+  if (!yes && !process.stdin.isTTY) {
+    console.error('init is interactive — run it in a terminal, or pass --yes to accept the top suggestions.')
+    return 2
+  }
+
   console.log(`Scanning ${roots.length} root(s) for route tables…`)
   const candidates = await findCandidates(roots)
 

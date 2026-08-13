@@ -152,3 +152,18 @@ test('a partially resolved table is not compared', async () => {
   assert.equal(routes?.ios, undefined)
   assert.equal(findings.filter((f) => f.rule === 'route-gap').length, 0)
 })
+
+// Piped stdin gave the prompts EOF and init exited 0 having written nothing —
+// a silent success in CI, which is the failure class this tool exists to prevent
+test('init without a terminal refuses instead of succeeding silently', async () => {
+  const { spawnSync } = await import('node:child_process')
+  const cli = join(FIXTURES, '..', 'src', 'cli.ts')
+
+  const result = spawnSync(
+    process.execPath,
+    ['--import', 'tsx', cli, 'init', join(FIXTURES, 'sample-cross')],
+    { encoding: 'utf8', input: '' },
+  )
+  assert.equal(result.status, 2)
+  assert.ok(result.stderr.includes('--yes'))
+})
