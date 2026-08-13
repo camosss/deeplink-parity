@@ -51,7 +51,15 @@ async function pickFiles(
     if (answer === 's' || answer === '') return []
     if (answer === 'm') {
       const manual = (await rl.question('path: ')).trim()
-      return manual ? [manual] : []
+      if (!manual) return []
+      // a mistyped path written into the config would only surface at check time
+      try {
+        await access(manual)
+        return [manual]
+      } catch {
+        console.log(`  Not found: ${manual}`)
+        continue
+      }
     }
     const tokens = answer.split(/[,\s]+/)
     const indexes = tokens.map((t) => Number.parseInt(t, 10))

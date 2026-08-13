@@ -47,10 +47,12 @@ export async function extractRoutes(
   const findings: Finding[] = []
   const files: string[] = []
   const paths = new Set<string>()
+  let unresolved = false
 
   for (const file of config.files) {
     const hits = await resolveInRoots(file, roots)
     if (hits.length === 0) {
+      unresolved = true
       findings.push({
         severity: 'error',
         rule: 'routes-file-missing',
@@ -60,6 +62,7 @@ export async function extractRoutes(
       continue
     }
     if (hits.length > 1) {
+      unresolved = true
       findings.push({
         severity: 'error',
         rule: 'routes-file-ambiguous',
@@ -75,6 +78,9 @@ export async function extractRoutes(
       paths.add(m[1] ?? m[0])
     }
   }
+
+  // a table missing any of its files is incomplete; diffing it would manufacture gaps
+  if (unresolved) return { findings }
 
   if (files.length > 0 && paths.size === 0) {
     // matching nothing is a broken config, never a clean pass

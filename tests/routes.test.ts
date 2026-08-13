@@ -135,3 +135,20 @@ test('a root that does not exist fails the run with a clear message', async () =
     assert.ok(result.stderr.includes('does-not-exist'))
   }
 })
+
+// A table missing one of its files is incomplete — diffing the partial table would
+// manufacture gaps for every path that lived in the missing file
+test('a partially resolved table is not compared', async () => {
+  const { routes, findings } = await run({
+    roots: [CROSS],
+    source: localSource(join(CROSS, 'well-known')),
+    routes: {
+      ios: { files: ['ios/App/DeepLinkRoutes.swift', 'nope/Missing.swift'], match: ROUTES.ios.match },
+      android: ROUTES.android,
+    },
+  })
+
+  assert.ok(findings.some((f) => f.rule === 'routes-file-missing'))
+  assert.equal(routes?.ios, undefined)
+  assert.equal(findings.filter((f) => f.rule === 'route-gap').length, 0)
+})
