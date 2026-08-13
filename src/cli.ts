@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { stat, writeFile } from 'node:fs/promises'
+import { readFile, stat, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { localSource, networkSource } from './fetch/wellKnown.js'
 import { exitCodeFor, printReport } from './report/console.js'
@@ -29,6 +29,7 @@ Options
   --output <file>          Also write the JSON result to a file
   --format github          GitHub Actions annotations (auto-detected on Actions)
   --yes                    init only: accept the top suggestion without prompting
+  -v, --version            Print the version
   -h, --help               Show this message
 
 The check reads the repositories and GETs two public well-known files per domain —
@@ -41,6 +42,7 @@ function parseArgs(argv: string[]) {
   const positional: string[] = []
   let json = false
   let help = false
+  let version = false
   let printRoutes = false
   let yes = false
   let sha256: string | undefined
@@ -54,6 +56,7 @@ function parseArgs(argv: string[]) {
     const arg = args[i]
     if (arg === '--json') json = true
     else if (arg === '-h' || arg === '--help') help = true
+    else if (arg === '-v' || arg === '--version') version = true
     else if (arg === '--print-routes') printRoutes = true
     else if (arg === '--yes') yes = true
     else if (arg === '--sha256') sha256 = args[++i]
@@ -72,6 +75,7 @@ function parseArgs(argv: string[]) {
     roots: roots.length ? roots : [resolve('.')],
     json,
     help,
+    version,
     printRoutes,
     yes,
     sha256,
@@ -106,6 +110,15 @@ async function assertRootsExist(roots: string[]) {
 
 async function main() {
   const opts = parseArgs(process.argv)
+
+  const pkg = JSON.parse(
+    await readFile(new URL('../package.json', import.meta.url), 'utf8'),
+  ) as { version: string }
+
+  if (opts.version) {
+    console.log(pkg.version)
+    return
+  }
 
   if (opts.help) {
     console.log(USAGE)
@@ -155,6 +168,8 @@ async function main() {
   }
 
   const payload = {
+    version: pkg.version,
+    routeConfig: configPath,
     ios: result.iosApps.map((a) => ({
       entitlements: a.entitlementsPath,
       teamId: a.teamId,
@@ -187,11 +202,18 @@ async function main() {
   // machine-readable output in the same run.
   if (opts.output) await writeFile(opts.output, `${JSON.stringify(payload, null, 2)}\n`)
 
+  const routesLine = configPath
+    ? `routes: ${configPath}` +
+      (result.routes
+        ? ` (iOS ${result.routes.ios?.paths.length ?? 0} · Android ${result.routes.android?.paths.length ?? 0})`
+        : '')
+    : 'routes: no config found — run "deeplink-parity init" to compare route tables'
+
   if (opts.json) {
     console.log(JSON.stringify(payload, null, 2))
   } else {
     if (opts.format === 'github') printGithubAnnotations(result.findings)
-    printReport(result.findings, result.domains)
+    printReport(result.findings, result.domains, { version: pkg.version, routesLine })
   }
 
   process.exit(exitCodeFor(result.findings))

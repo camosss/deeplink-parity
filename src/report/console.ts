@@ -15,12 +15,21 @@ const ORDER: Severity[] = ['error', 'warn', 'info']
 const useColor = process.stdout.isTTY && !process.env.NO_COLOR
 const paint = (s: string, c: string) => (useColor ? `${c}${s}${RESET}` : s)
 
-export function printReport(findings: Finding[], checkedDomains: string[]) {
+export interface ReportMeta {
+  version: string
+  /** One line describing route-config state — shown so config discovery is never invisible */
+  routesLine: string
+}
+
+export function printReport(findings: Finding[], checkedDomains: string[], meta?: ReportMeta) {
   // every escape goes through paint(), which is a no-op when stdout is not a terminal
   const separator = paint('·', DIM)
+  const version = meta ? ` ${paint(`v${meta.version}`, DIM)}` : ''
   console.log(
-    `\n${paint('deeplink-parity', BOLD)} ${separator} ${checkedDomains.length} domain(s) checked\n`,
+    `\n${paint('deeplink-parity', BOLD)}${version} ${separator} ${checkedDomains.length} domain(s) checked`,
   )
+  if (meta) console.log(paint(meta.routesLine, DIM))
+  console.log()
 
   if (findings.length === 0) {
     console.log(paint('No problems found', '[32m'))
