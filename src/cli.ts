@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { writeFile } from 'node:fs/promises'
+import { stat, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { localSource, networkSource } from './fetch/wellKnown.js'
 import { exitCodeFor, printReport } from './report/console.js'
@@ -82,6 +82,28 @@ function parseArgs(argv: string[]) {
   }
 }
 
+/**
+ * A mistyped path must fail loudly. Scanning a directory that does not exist would
+ * read exactly like an empty repository — "no candidates", "nothing declared" — and
+ * a wrong answer that looks like a clean one is the failure mode this tool exists
+ * to prevent.
+ */
+async function assertRootsExist(roots: string[]) {
+  for (const root of roots) {
+    let ok = false
+    try {
+      ok = (await stat(root)).isDirectory()
+    } catch {
+      // fall through to the error below
+    }
+    if (!ok) {
+      console.error(`Not a directory: ${root}`)
+      console.error('Pass the path to each checkout, e.g. deeplink-parity ./app-ios ./app-android')
+      process.exit(2)
+    }
+  }
+}
+
 async function main() {
   const opts = parseArgs(process.argv)
 
@@ -89,6 +111,8 @@ async function main() {
     console.log(USAGE)
     return
   }
+
+  await assertRootsExist(opts.roots)
 
   if (opts.command === 'init') {
     process.exit(await runInit(opts.roots, opts.yes))

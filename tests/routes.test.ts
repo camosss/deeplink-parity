@@ -107,3 +107,19 @@ test('regex suggestion recognises the swift enum shape and extracts its paths', 
   assert.ok(suggestions.length > 0)
   assert.deepEqual(suggestions[0].paths, ['/item', '/item/best', '/notice', '/search'])
 })
+
+// Reported by the first real init user: a mistyped root was scanned as if it were an
+// empty repository instead of failing loudly
+test('a root that does not exist fails the run with a clear message', async () => {
+  const { spawnSync } = await import('node:child_process')
+  const cli = join(FIXTURES, '..', 'src', 'cli.ts')
+
+  for (const args of [['./does-not-exist'], ['init', './does-not-exist', '--yes']]) {
+    const result = spawnSync(process.execPath, ['--import', 'tsx', cli, ...args], {
+      encoding: 'utf8',
+    })
+    assert.equal(result.status, 2)
+    assert.ok(result.stderr.includes('Not a directory'))
+    assert.ok(result.stderr.includes('does-not-exist'))
+  }
+})
