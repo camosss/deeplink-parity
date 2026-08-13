@@ -42,7 +42,8 @@ export function printReport(findings: Finding[], checkedDomains: string[], meta?
       const head = paint(LABEL[severity], COLOR[severity])
       // Not every finding is tied to a domain — fall back to the rule id so the line is never blank
       const subject = f.domain ? paint(f.domain, BOLD) : paint(f.rule, DIM)
-      console.log(`${head}  ${subject}`)
+      const known = f.baselined ? ` ${paint('(baselined)', DIM)}` : ''
+      console.log(`${head}  ${subject}${known}`)
       console.log(`       ${f.message}`)
       if (f.detail) console.log(`       ${paint(f.detail, DIM)}`)
       if (f.source) console.log(`       ${paint(f.source, DIM)}`)
@@ -55,6 +56,7 @@ export function printReport(findings: Finding[], checkedDomains: string[], meta?
   console.log()
 }
 
+/** A baselined error is a known problem being tracked — it must not fail the run. */
 export function exitCodeFor(findings: Finding[]) {
-  return findings.some((f) => f.severity === 'error') ? 1 : 0
+  return findings.some((f) => f.severity === 'error' && !f.baselined) ? 1 : 0
 }

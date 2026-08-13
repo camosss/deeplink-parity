@@ -23,6 +23,8 @@ function escapeProperty(value: string) {
  */
 export function printGithubAnnotations(findings: Finding[]) {
   for (const f of findings) {
+    // a known finding stays visible but must not paint the run red
+    const level = f.baselined ? 'notice' : LEVEL[f.severity]
     const props: string[] = [`title=${escapeProperty(`deeplink-parity ${f.rule}`)}`]
 
     // Annotations anchor to a path inside the checkout. A source can also be a URL or an
@@ -32,7 +34,9 @@ export function printGithubAnnotations(findings: Finding[]) {
       props.push(`file=${escapeProperty(f.source)}`)
     }
 
-    const body = [f.domain, f.message, f.detail].filter(Boolean).join(' — ')
-    console.log(`::${LEVEL[f.severity]} ${props.join(',')}::${escapeData(body)}`)
+    const body = [f.baselined ? '(baselined)' : '', f.domain, f.message, f.detail]
+      .filter(Boolean)
+      .join(' — ')
+    console.log(`::${level} ${props.join(',')}::${escapeData(body)}`)
   }
 }

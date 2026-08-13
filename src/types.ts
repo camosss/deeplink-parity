@@ -11,6 +11,8 @@ export interface Finding {
   detail?: string
   /** Where it came from — a repo path or a URL */
   source?: string
+  /** Known finding, frozen in the baseline file — reported but does not fail the run */
+  baselined?: boolean
 }
 
 export interface IosApp {
