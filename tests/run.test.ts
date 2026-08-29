@@ -164,3 +164,60 @@ test('flags an Expo project whose native folders are not committed', async () =>
   assert.ok(expo.detail?.includes('example.com'))
   assert.ok(expo.detail?.includes('links.example.com'))
 })
+
+test('a second target sharing a domain is still checked against the AASA', async () => {
+  const root = join(FIXTURES, 'sample-multi-target')
+  const { iosApps, findings } = await run({
+    roots: [root],
+    source: localSource(join(root, 'well-known')),
+  })
+  assert.equal(iosApps.length, 2)
+  // the widget is not in the AASA — before the fix this run reported "no problems"
+  const missing = findings.filter((f) => f.rule === 'aasa-appid-missing')
+  assert.equal(missing.length, 1)
+  assert.match(missing[0].message, /com\.example\.sample\.Widget/)
+  // domain-level findings must not duplicate per app
+  assert.equal(findings.filter((f) => f.rule === 'aasa-unreachable').length, 0)
+})
+
+test('a broken entitlements file is a named warning, not a silent skip', async () => {
+  const { mkdtemp, writeFile, mkdir } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const root = await mkdtemp(join(tmpdir(), 'dlp-broken-'))
+  await mkdir(join(root, 'App'), { recursive: true })
+  await writeFile(join(root, 'App', 'App.entitlements'), '<?xml version="1.0"?><plist><dict><key>unclosed')
+  const { findings } = await run({ roots: [root], source: localSource(join(root, 'nowhere')) })
+  const warn = findings.filter((f) => f.rule === 'entitlements-unreadable')
+  assert.equal(warn.length, 1)
+  assert.match(warn[0].detail ?? '', /NOT checked/)
+})
+
+test('a Groovy interpolated resValue host is unresolved, not fetched as a literal', async () => {
+  const { mkdtemp, writeFile, mkdir } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const root = await mkdtemp(join(tmpdir(), 'dlp-gstring-'))
+  await mkdir(join(root, 'app', 'src', 'main'), { recursive: true })
+  await writeFile(join(root, 'app', 'build.gradle'), [
+    'android { defaultConfig { applicationId "com.example.app" } }',
+    'resValue "string", "deeplink_host", "${envHost}.example.com"',
+    'resValue("string", "positional_host", "positional.example.com")',
+  ].join('\n'))
+  await writeFile(join(root, 'app', 'src', 'main', 'AndroidManifest.xml'), `<?xml version="1.0"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.app">
+  <application><activity android:name=".Main">
+    <intent-filter android:autoVerify="true">
+      <action android:name="android.intent.action.VIEW"/>
+      <category android:name="android.intent.category.DEFAULT"/>
+      <category android:name="android.intent.category.BROWSABLE"/>
+      <data android:scheme="https" android:host="@string/deeplink_host"/>
+      <data android:scheme="https" android:host="@string/positional_host"/>
+    </intent-filter>
+  </activity></application>
+</manifest>`)
+  const { findings, androidApps } = await run({ roots: [root], source: localSource(join(root, 'nowhere')) })
+  // interpolated value must be unresolved, never fetched as "${envHost}.example.com"
+  assert.equal(findings.some((f) => f.domain?.includes('$')), false)
+  assert.equal(findings.some((f) => f.rule === 'host-unresolved'), true)
+  // parenthesised positional form resolves
+  assert.equal(androidApps[0].hosts.some((h) => h.host === 'positional.example.com'), true)
+})

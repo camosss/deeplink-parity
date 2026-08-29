@@ -50,8 +50,16 @@ export async function indexResValues(paths: string[], index: ResourceIndex) {
     for (const m of src.matchAll(/resValue\s*\(([\s\S]*?)\)\s*(?:\n|$)/g)) {
       const args = m[1]
       if (!/["']string["']/.test(args)) continue
-      const name = /name\s*=\s*["']([^"']+)["']/.exec(args)?.[1]
-      const value = /value\s*=\s*([\s\S]+?)\s*$/.exec(args)?.[1]
+      let name = /name\s*=\s*["']([^"']+)["']/.exec(args)?.[1]
+      let value = name ? /value\s*=\s*([\s\S]+?)\s*$/.exec(args)?.[1] : undefined
+      if (!name) {
+        // parenthesised positional form — resValue("string", "host", "example.com")
+        const positional = /^\s*["']string["']\s*,\s*["']([^"']+)["']\s*,\s*([\s\S]+?)\s*$/.exec(args)
+        if (positional) {
+          name = positional[1]
+          value = positional[2]
+        }
+      }
       if (!name || !value) continue
       const list = index.resValues.get(name) ?? []
       list.push(value.trim())
@@ -89,7 +97,13 @@ export async function indexProperties(paths: string[], index: ResourceIndex) {
  */
 function resolveGradleExpression(expr: string, index: ResourceIndex): string | undefined {
   const literal = /^(["'])([^"']*)\1(?:\s+as\s+\w+)?$/.exec(expr.trim())
-  if (literal) return literal[2]
+  if (literal) {
+    // a double-quoted string containing $ is interpolated (Groovy GString, Kotlin
+    // template) — treating "${envHost}.example.com" as a literal host once sent a
+    // fetch to a domain that does not exist and misreported it as unreachable
+    if (literal[1] === '"' && literal[2].includes('$')) return undefined
+    return literal[2]
+  }
 
   const lookup =
     /\[\s*["']([^"']+)["']\s*\]/.exec(expr) ?? /getProperty\(\s*["']([^"']+)["']\s*\)/.exec(expr)

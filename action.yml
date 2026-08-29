@@ -34,8 +34,8 @@ inputs:
     required: false
   fail-on:
     description: >-
-      When the step should fail — "error" (default) or "never" to report without
-      blocking. Useful while an existing backlog is being cleared.
+      When the step should fail — "error" (default), "warn" to also gate on warnings
+      (route gaps, platform domain gaps), or "never" to report without blocking.
     required: false
     default: error
   version:
@@ -89,12 +89,14 @@ runs:
         fi
 
         args=()
-        # unquoted on purpose: paths are whitespace separated
-        for p in $INPUT_PATHS; do args+=("$p"); done
+        # whitespace-separated paths, split without glob expansion
+        read -r -a input_paths <<< "$INPUT_PATHS"
+        for p in "${input_paths[@]}"; do args+=("$p"); done
         [ -n "$INPUT_SHA256" ] && args+=(--sha256 "$INPUT_SHA256")
         [ -n "$INPUT_WELL_KNOWN" ] && args+=(--well-known "$INPUT_WELL_KNOWN")
         [ -n "$INPUT_CONFIG" ] && args+=(--config "$INPUT_CONFIG")
         [ -n "$INPUT_BASELINE" ] && args+=(--baseline "$INPUT_BASELINE")
+        args+=(--fail-on "$INPUT_FAIL_ON")
 
         set +e
         "${cmd[@]}" "${args[@]}" --output "$report"
@@ -114,7 +116,5 @@ runs:
           echo "report=$report" >> "$GITHUB_OUTPUT"
         fi
 
-        # exit 2 means the run itself failed, which always fails the step
-        if [ "$status" = "2" ]; then exit 2; fi
-        if [ "$INPUT_FAIL_ON" = "never" ]; then exit 0; fi
+        # the fail-on policy is applied by the CLI itself; exit 2 (run failure) still fails
         exit "$status"

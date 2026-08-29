@@ -39,3 +39,14 @@ test('annotates only sources that resolve inside the checkout', async (t) => {
   assert.ok(lines[1].startsWith('::warning '))
   assert.ok(lines[2].startsWith('::notice '))
 })
+
+test('fail-on decides which severities break the run, baselined never does', async () => {
+  const { exitCodeFor } = await import('../src/report/console.js')
+  const findings = [
+    { severity: 'warn' as const, rule: 'route-gap', message: 'gap' },
+    { severity: 'error' as const, rule: 'aasa-unreachable', message: 'down', baselined: true },
+  ]
+  assert.equal(exitCodeFor(findings, 'error'), 0) // only a baselined error
+  assert.equal(exitCodeFor(findings, 'warn'), 1)  // the warn now gates
+  assert.equal(exitCodeFor(findings, 'never'), 0)
+})

@@ -1,9 +1,6 @@
 import type { Finding } from '../types.js'
 import type { ExtractedRoutes } from './extract.js'
 
-/** Above this many gaps per direction, one grouped finding replaces per-path noise. */
-const GROUP_THRESHOLD = 20
-
 const DYNAMIC_NOTE =
   'Routes handled dynamically (prefix or path-component matching) never appear in a route table — confirm before acting.'
 
@@ -15,18 +12,9 @@ function gapFindings(
   const presentName = present.platform === 'ios' ? 'iOS' : 'Android'
   const absentName = absent.platform === 'ios' ? 'iOS' : 'Android'
 
-  if (gaps.length > GROUP_THRESHOLD) {
-    return [
-      {
-        severity: 'warn',
-        rule: 'route-gap',
-        message: `${gaps.length} routes are in the ${presentName} route table but not ${absentName}'s`,
-        detail: `${gaps.join(', ')} · ${DYNAMIC_NOTE}`,
-        source: present.files[0],
-      },
-    ]
-  }
-
+  // Always one finding per path: a grouped finding keyed its baseline identity on a
+  // message containing the gap COUNT, so 21→22 gaps refired everything. The reporters
+  // collapse long runs visually instead.
   return gaps.map((path) => ({
     severity: 'warn' as const,
     rule: 'route-gap',

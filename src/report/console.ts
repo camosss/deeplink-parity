@@ -37,17 +37,29 @@ export function printReport(findings: Finding[], checkedDomains: string[], meta?
     return
   }
 
+  const SHOW_PER_RULE = 20
   for (const severity of ORDER) {
-    for (const f of findings.filter((x) => x.severity === severity)) {
-      const head = paint(LABEL[severity], COLOR[severity])
-      // Not every finding is tied to a domain — fall back to the rule id so the line is never blank
-      const subject = f.domain ? paint(f.domain, BOLD) : paint(f.rule, DIM)
-      const known = f.baselined ? ` ${paint('(baselined)', DIM)}` : ''
-      console.log(`${head}  ${subject}${known}`)
-      console.log(`       ${f.message}`)
-      if (f.detail) console.log(`       ${paint(f.detail, DIM)}`)
-      if (f.source) console.log(`       ${paint(f.source, DIM)}`)
-      console.log()
+    const ofSeverity = findings.filter((x) => x.severity === severity)
+    const byRule = new Map<string, Finding[]>()
+    for (const f of ofSeverity) {
+      byRule.set(f.rule, [...(byRule.get(f.rule) ?? []), f])
+    }
+    for (const [rule, group] of byRule) {
+      for (const f of group.slice(0, SHOW_PER_RULE)) {
+        const head = paint(LABEL[severity], COLOR[severity])
+        // Not every finding is tied to a domain — fall back to the rule id so the line is never blank
+        const subject = f.domain ? paint(f.domain, BOLD) : paint(f.rule, DIM)
+        const known = f.baselined ? ` ${paint('(baselined)', DIM)}` : ''
+        console.log(`${head}  ${subject}${known}`)
+        console.log(`       ${f.message}`)
+        if (f.detail) console.log(`       ${paint(f.detail, DIM)}`)
+        if (f.source) console.log(`       ${paint(f.source, DIM)}`)
+        console.log()
+      }
+      if (group.length > SHOW_PER_RULE) {
+        console.log(paint(`       … ${group.length - SHOW_PER_RULE} more ${rule} finding(s) — see --json or --output for all`, DIM))
+        console.log()
+      }
     }
   }
 
@@ -56,7 +68,16 @@ export function printReport(findings: Finding[], checkedDomains: string[], meta?
   console.log()
 }
 
-/** A baselined error is a known problem being tracked — it must not fail the run. */
-export function exitCodeFor(findings: Finding[]) {
-  return findings.some((f) => f.severity === 'error' && !f.baselined) ? 1 : 0
+export type FailOn = 'error' | 'warn' | 'never'
+
+/**
+ * A baselined finding is a known problem being tracked — it must not fail the run.
+ * --fail-on warn makes route parity (all warn) an actual CI gate; without it, freezing
+ * warns in a baseline had no effect beyond a label.
+ */
+export function exitCodeFor(findings: Finding[], failOn: FailOn = 'error') {
+  if (failOn === 'never') return 0
+  const failing = (f: Finding) =>
+    !f.baselined && (f.severity === 'error' || (failOn === 'warn' && f.severity === 'warn'))
+  return findings.some(failing) ? 1 : 0
 }

@@ -21,8 +21,18 @@ function escapeProperty(value: string) {
  * changed lines when a finding points at a file in the repository.
  * https://docs.github.com/actions/reference/workflow-commands-for-github-actions
  */
+const ANNOTATIONS_PER_RULE = 10
+
 export function printGithubAnnotations(findings: Finding[]) {
+  const emitted = new Map<string, number>()
+  const truncated = new Map<string, number>()
   for (const f of findings) {
+    const count = emitted.get(f.rule) ?? 0
+    if (count >= ANNOTATIONS_PER_RULE) {
+      truncated.set(f.rule, (truncated.get(f.rule) ?? 0) + 1)
+      continue
+    }
+    emitted.set(f.rule, count + 1)
     // a known finding stays visible but must not paint the run red
     const level = f.baselined ? 'notice' : LEVEL[f.severity]
     const props: string[] = [`title=${escapeProperty(`deeplink-parity ${f.rule}`)}`]
@@ -38,5 +48,8 @@ export function printGithubAnnotations(findings: Finding[]) {
       .filter(Boolean)
       .join(' — ')
     console.log(`::${level} ${props.join(',')}::${escapeData(body)}`)
+  }
+  for (const [rule, count] of truncated) {
+    console.log(`::notice title=${escapeProperty(`deeplink-parity ${rule}`)}::${escapeData(`${count} more ${rule} finding(s) not annotated — see the JSON report for all`)}`)
   }
 }

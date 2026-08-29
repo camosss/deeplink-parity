@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 
 import plist from 'plist'
-import type { IosApp } from '../types.js'
+import type { Finding, IosApp } from '../types.js'
 import { displayPath, walk } from './walk.js'
 
 /**
@@ -74,9 +74,15 @@ function matchSigning(path: string, signing: Map<string, TargetSigning>): Target
   return best
 }
 
-export async function discoverIos(root: string): Promise<IosApp[]> {
+export interface IosDiscovery {
+  apps: IosApp[]
+  findings: Finding[]
+}
+
+export async function discoverIos(root: string): Promise<IosDiscovery> {
+  const findings: Finding[] = []
   const entitlementFiles = await walk(root, (n) => n.endsWith('.entitlements'))
-  if (entitlementFiles.length === 0) return []
+  if (entitlementFiles.length === 0) return { apps: [], findings }
 
   const pbxprojPaths = await walk(root, (n) => n === 'project.pbxproj')
   const signing = new Map<string, TargetSigning>()
@@ -91,7 +97,15 @@ export async function discoverIos(root: string): Promise<IosApp[]> {
     let parsed: unknown
     try {
       parsed = plist.parse(await readFile(path, 'utf8'))
-    } catch {
+    } catch (err) {
+      // a file that fails to parse would read as "no declaration" — silent narrowing
+      findings.push({
+        severity: 'warn',
+        rule: 'entitlements-unreadable',
+        message: `Could not parse ${path} — ${err instanceof Error ? err.message : String(err)}`,
+        detail: 'If this file declares applinks:, its domains were NOT checked this run.',
+        source: path,
+      })
       continue
     }
     const dict = parsed as Record<string, unknown>
@@ -110,5 +124,5 @@ export async function discoverIos(root: string): Promise<IosApp[]> {
       teamId: target.teamId,
     })
   }
-  return apps
+  return { apps, findings }
 }

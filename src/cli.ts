@@ -3,7 +3,7 @@ import { readFile, stat, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { applyBaseline, BASELINE_NAME, findBaseline, loadBaseline, writeBaseline } from './baseline.js'
 import { localSource, networkSource } from './fetch/wellKnown.js'
-import { exitCodeFor, printReport } from './report/console.js'
+import { exitCodeFor, printReport, type FailOn } from './report/console.js'
 import { printGithubAnnotations } from './report/github.js'
 import { findConfig, loadRoutesConfig } from './routes/config.js'
 import { runInit } from './routes/init.js'
@@ -53,6 +53,7 @@ function parseArgs(argv: string[]) {
   let output: string | undefined
   let config: string | undefined
   let baseline: string | undefined
+  let failOn: FailOn = 'error'
   // Actions sets GITHUB_ACTIONS=true; annotate by default there
   let format = process.env.GITHUB_ACTIONS === 'true' ? 'github' : 'console'
 
@@ -69,7 +70,25 @@ function parseArgs(argv: string[]) {
     else if (arg === '--output') output = args[++i]
     else if (arg === '--config') config = args[++i]
     else if (arg === '--baseline') baseline = args[++i]
-    else if (!arg.startsWith('-')) positional.push(arg)
+    else if (arg === '--fail-on') {
+      const v = args[++i]
+      if (v !== 'error' && v !== 'warn' && v !== 'never') {
+        console.error(`error: --fail-on must be "error", "warn" or "never", got "${v}"`)
+        process.exit(2)
+      }
+      failOn = v
+    }
+    else if (arg.startsWith('-')) {
+      // a mistyped flag must not become a scan root or silently drop an option —
+      // --well-knwon once sent a "no egress" CI run out to the real network
+      console.error(`error: unknown flag "${arg}" — see --help`)
+      process.exit(2)
+    } else positional.push(arg)
+  }
+
+  if (format !== 'console' && format !== 'github') {
+    console.error(`error: --format must be "console" or "github", got "${format}"`)
+    process.exit(2)
   }
 
   const command = positional[0] === 'init' || positional[0] === 'baseline' ? positional[0] : 'check'
@@ -89,6 +108,7 @@ function parseArgs(argv: string[]) {
     config,
     baseline,
     format,
+    failOn,
   }
 }
 
@@ -180,8 +200,15 @@ async function main() {
     }
   }
 
+  // a run that successfully extracted route tables is a legitimate run — before this
+  // guard, a routes-only run failed exactly when every route matched and passed when
+  // there were gaps, inverting success and failure
+  const routesExtracted = Boolean(result.routes?.ios ?? result.routes?.android)
   const nothingFound =
-    result.iosApps.length === 0 && result.androidApps.length === 0 && result.findings.length === 0
+    result.iosApps.length === 0 &&
+    result.androidApps.length === 0 &&
+    result.findings.length === 0 &&
+    !routesExtracted
   if (nothingFound) {
     console.error(`No app configuration declaring deep links was found in ${opts.roots.join(', ')}`)
     console.error(
@@ -224,9 +251,12 @@ async function main() {
       : undefined,
     summary: {
       domains: result.domains.length,
-      error: result.findings.filter((f) => f.severity === 'error').length,
-      warn: result.findings.filter((f) => f.severity === 'warn').length,
-      info: result.findings.filter((f) => f.severity === 'info').length,
+      // counts exclude baselined findings, matching the exit-code semantics — a
+      // consumer branching on `error` must agree with whether the run failed
+      error: result.findings.filter((f) => f.severity === 'error' && !f.baselined).length,
+      warn: result.findings.filter((f) => f.severity === 'warn' && !f.baselined).length,
+      info: result.findings.filter((f) => f.severity === 'info' && !f.baselined).length,
+      baselined: result.findings.filter((f) => f.baselined).length,
     },
     findings: result.findings,
   }
@@ -253,7 +283,7 @@ async function main() {
     printReport(result.findings, result.domains, { version: pkg.version, routesLine })
   }
 
-  process.exit(exitCodeFor(result.findings))
+  process.exit(exitCodeFor(result.findings, opts.failOn))
 }
 
 main().catch((err) => {

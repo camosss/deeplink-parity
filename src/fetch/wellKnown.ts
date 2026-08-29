@@ -92,8 +92,12 @@ export function localSource(dir: string): WellKnownSource {
         contentType: 'application/json',
         body: await readFile(path, 'utf8'),
       }
-    } catch {
-      return { url: path, ok: false, status: 404, redirected: false }
+    } catch (err) {
+      // only a missing file is a 404 — a permission error reported as 404 misleads
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return { url: path, ok: false, status: 404, redirected: false }
+      }
+      return { url: path, ok: false, redirected: false, error: err instanceof Error ? err.message : String(err) }
     }
   }
   return {

@@ -62,7 +62,7 @@ function applicationIds(gradleSources: string[]): string[] {
 export async function discoverAndroid(root: string): Promise<AndroidApp[]> {
   const manifests = (await walk(root, (n) => n === 'AndroidManifest.xml')).filter(
     // androidTest/debug manifests rarely declare shipping deep links
-    (p) => !/src\/(androidTest|test)\//.test(p),
+    (p) => !/src[\/\\](androidTest|test)[\/\\]/.test(p),
   )
   if (manifests.length === 0) return []
 

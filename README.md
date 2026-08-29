@@ -146,6 +146,7 @@ npx deeplink-parity baseline [path...]         # freeze current findings; fail o
   --json                   Machine-readable output on stdout
   --output <file>          Also write the JSON result to a file
   --format github          GitHub Actions annotations (auto-detected on Actions)
+  --fail-on <level>        error (default) · warn to also gate on warnings · never
   --yes                    init only: accept the top suggestion without prompting
   -v, --version            Print the version
   -h, --help               Show this message
@@ -190,7 +191,7 @@ Findings appear as annotations on the run, and counts are available to later ste
 | `well-known` | — | Read from disk instead of the network |
 | `config` | auto | Route config file (see [Route parity](#route-parity)) |
 | `baseline` | auto | Baseline file (see [Start with existing findings](#start-with-existing-findings)) |
-| `fail-on` | `error` | `never` to report without failing the step |
+| `fail-on` | `error` | `warn` to also gate on warnings (route gaps), `never` to report without failing |
 | `version` | pinned | npm version to run |
 
 Outputs: `errors`, `warnings`, `notices`, `domains`, `report` (path to the JSON result).
@@ -219,7 +220,9 @@ npx deeplink-parity baseline ./app-ios ./app-android
 
 That writes `deeplink-parity-baseline.json` — commit it. From then on every check still
 **reports** the known findings, marked `(baselined)`, but only a finding that is not in
-the file fails the run. The file stores a one-line summary per finding, so a reviewer
+the file can fail the run. By default only errors fail; pass `--fail-on warn` to make
+warnings (route gaps, platform domain gaps) gate too — that is what makes freezing
+warnings in a baseline meaningful. The file stores a one-line summary per finding, so a reviewer
 can read what is being tolerated. When a baselined problem gets fixed, the check says
 so; re-run `baseline` to tighten the file.
 
