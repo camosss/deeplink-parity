@@ -102,9 +102,9 @@ export async function discoverIos(root: string): Promise<IosDiscovery> {
       findings.push({
         severity: 'warn',
         rule: 'entitlements-unreadable',
-        message: `Could not parse ${path} — ${err instanceof Error ? err.message : String(err)}`,
+        message: `Could not parse ${displayPath(path)} — ${err instanceof Error ? err.message : String(err)}`,
         detail: 'If this file declares applinks:, its domains were NOT checked this run.',
-        source: path,
+        source: displayPath(path),
       })
       continue
     }

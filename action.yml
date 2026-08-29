@@ -96,7 +96,7 @@ runs:
         [ -n "$INPUT_WELL_KNOWN" ] && args+=(--well-known "$INPUT_WELL_KNOWN")
         [ -n "$INPUT_CONFIG" ] && args+=(--config "$INPUT_CONFIG")
         [ -n "$INPUT_BASELINE" ] && args+=(--baseline "$INPUT_BASELINE")
-        args+=(--fail-on "$INPUT_FAIL_ON")
+        [ -n "$INPUT_FAIL_ON" ] && args+=(--fail-on "$INPUT_FAIL_ON")
 
         set +e
         "${cmd[@]}" "${args[@]}" --output "$report"

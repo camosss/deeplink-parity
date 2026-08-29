@@ -20,7 +20,9 @@ interface BaselineFile {
  * without a domain (route gaps) carry their identity in the message.
  */
 export function baselineKey(f: Finding): string {
-  return `${f.rule}|${f.domain ?? f.message}`
+  // app-scoped rules carry a subject: the widget's missing appID and the app's are two
+  // different problems on the same domain, and freezing one must not silence the other
+  return `${f.rule}|${f.domain ?? f.message}${f.subject ? `|${f.subject}` : ''}`
 }
 
 /** Same lookup order as the route config: an explicit path wins, then cwd, then roots. */

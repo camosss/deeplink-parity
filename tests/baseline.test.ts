@@ -104,3 +104,10 @@ test('the baseline subcommand turns a failing check green', async () => {
     await rm(dir, { recursive: true })
   }
 })
+
+test("freezing the widget's missing appID does not silence the app's on the same domain", async () => {
+  const { baselineKey } = await import('../src/baseline.js')
+  const widget = { severity: 'error' as const, rule: 'aasa-appid-missing', domain: 'example.com', subject: 'T.com.example.Widget', message: 'w' }
+  const app = { severity: 'error' as const, rule: 'aasa-appid-missing', domain: 'example.com', subject: 'T.com.example', message: 'a' }
+  assert.notEqual(baselineKey(widget), baselineKey(app))
+})

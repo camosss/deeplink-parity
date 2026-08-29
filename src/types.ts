@@ -1,6 +1,9 @@
 export type Severity = 'error' | 'warn' | 'info'
 
 export interface Finding {
+  /** App identity (bundle/package id) for app-scoped rules — part of the baseline key,
+   *  so freezing the widget's finding does not silence the app's on the same domain */
+  subject?: string
   severity: Severity
   /** Stable rule id, e.g. "aasa-unreachable" */
   rule: string

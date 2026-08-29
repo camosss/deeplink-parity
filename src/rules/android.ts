@@ -83,6 +83,7 @@ export function checkAndroidHost(
     findings.push({
       severity: 'error',
       rule: 'assetlinks-package-missing',
+      subject: app.packageIds.join('/'),
       domain,
       message: `assetlinks.json does not list ${app.packageIds.join(' / ')}`,
       detail: `Declared package_name: ${handling.map((s) => s.packageName ?? '(none)').join(', ')}`,

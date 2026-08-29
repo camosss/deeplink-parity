@@ -90,6 +90,7 @@ export function checkIosDomain(app: IosApp, domain: string, res: FetchResult): I
       findings.push({
         severity: 'error',
         rule: 'aasa-appid-missing',
+        subject: `${app.teamId}.${app.bundleId}`,
         domain,
         message: `The AASA file does not list ${app.teamId}.${app.bundleId}`,
         detail: `Declared appIDs: ${declaredAppIds.join(', ')}`,
