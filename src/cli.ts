@@ -8,6 +8,7 @@ import { printGithubAnnotations } from './report/github.js'
 import { findConfig, loadRoutesConfig } from './routes/config.js'
 import { runInit } from './routes/init.js'
 import { run } from './run.js'
+import { displayPath } from './discover/walk.js'
 
 const USAGE = `deeplink-parity — check that what your app declares about deep links
 matches what is actually hosted, across iOS and Android.
@@ -269,7 +270,7 @@ async function main() {
     ? ` · baseline: ${applied?.matched ?? 0} known finding(s), failing on new only`
     : ''
   const routesLine = (configPath
-    ? `routes: ${configPath}` +
+    ? `routes: ${displayPath(configPath)}` +
       (result.routes
         ? ` (iOS ${result.routes.ios?.paths.length ?? 0} · Android ${result.routes.android?.paths.length ?? 0})`
         : '')

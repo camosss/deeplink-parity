@@ -13,7 +13,7 @@ npx deeplink-parity .
 ```
 
 ```
-deeplink-parity v0.6.4 · 3 domain(s) checked
+deeplink-parity v0.8.1 · 3 domain(s) checked
 routes: deeplink-parity.yml (iOS 74 · Android 73)
 
 ERROR  links.example.com
@@ -123,6 +123,8 @@ No configuration file. Domains are discovered from your app, then the matching w
 - **A route is in one platform's route table but not the other's** (with [route parity](#route-parity) set up)
 - An `https` intent-filter has no `autoVerify`
 - A manifest host reference could not be resolved
+- An entitlements file failed to parse — its domains were **not** checked this run
+  (a broken file must never read as "no declaration")
 
 **Info**
 
@@ -200,8 +202,8 @@ Outputs: `errors`, `warnings`, `notices`, `domains`, `report` (path to the JSON 
 
 | Exit code | Meaning |
 |---|---|
-| `0` | No errors. Warnings and notices do not fail the run |
-| `1` | At least one error — a link is broken today |
+| `0` | No failing findings. With the default `--fail-on error`, warnings and notices never fail the run |
+| `1` | At least one failing finding — an error, or a warning under `--fail-on warn` |
 | `2` | Nothing to check, or the run itself failed |
 
 Colour is emitted only to a terminal, so piped and captured output stays plain. `--json`
